@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PulmoSense — Sistem Pendukung Keputusan Klinis Deteksi Risiko Tuberkulosis Berbasis Biomarker Imunologi TLR2 dan Faktor Klinis." />
+  <title>PulmoSense — Tuberculosis Biomarker & Clinical Risk Assessment</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Cpath d='M32 12v22M24 22c-7 2-12 8-12 17 0 6 4 11 9 11 4 0 7-3 8-8V26c0-2-2-4-5-4zm16 0c7 2 12 8 12 17 0 6-4 11-9 11-4 0-7-3-8-8V26c0-2 2-4 5-4z' fill='none' stroke='%23ccfbf1' stroke-width='4.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --canvas: #f3f6f5;
+      --surface: #ffffff;
+      --surface-soft: #f8faf9;
+      --teal-900: #134e4a;
+      --teal-800: #115e59;
+      --teal-700: #0f766e;
+      --teal-600: #0d9488;
+      --teal-100: #ccfbf1;
+      --teal-50: #f0fdfa;
+      --ink-900: #0f172a;
+      --ink-700: #334155;
+      --ink-500: #64748b;
+      --line: #e2e8e6;
+      --line-strong: #cbd5d1;
+
+      --low-bg: #f0fdf4;
+      --low-fg: #15803d;
+      --low-bd: #bbf7d0;
+      --low-ring: #16a34a;
+
+      --mod-bg: #fffbeb;
+      --mod-fg: #b45309;
+      --mod-bd: #fde68a;
+      --mod-ring: #d97706;
+
+      --high-bg: #fef2f2;
+      --high-fg: #b91c1c;
+      --high-bd: #fecaca;
+      --high-ring: #dc2626;
+
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--canvas);
+      background-image:
+        radial-gradient(at 0% 0%, rgba(20, 184, 166, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(15, 118, 110, 0.07) 0px, transparent 50%);
+      color: var(--ink-900);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Clean Light Frosted Clinical Topbar (Distinct from dark header banners) */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topbar-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(145deg, var(--teal-700) 0%, var(--teal-900) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 14px rgba(15, 118, 110, 0.22);
+      flex-shrink: 0;
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .brand-copy h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--ink-900);
+      line-height: 1.1;
+    }
+
+    .brand-copy h1 span {
+      color: var(--teal-700);
+      font-weight: 600;
+    }
+
+    .brand-copy p {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--ink-500);
+      margin-top: 2px;
+    }
+
+    .clinical-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 12px;
+      border-radius: 99px;
+      background: var(--teal-50);
+      border: 1px solid var(--teal-100);
+      color: var(--teal-800);
+      font-size: 12px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .clinical-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--teal-600);
+    }
+
+    /* Bento Container */
+    .page-container {
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 26px 24px 36px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    @media (min-width: 880px) {
+      .bento-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 24px;
+      }
+    }
+
+    /* Elevated Bento Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 26px 28px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.03),
+        0 12px 30px rgba(15, 118, 110, 0.045);
+    }
+
+    .card > form {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 750;
+      color: var(--ink-900);
+      letter-spacing: -0.01em;
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: var(--ink-500);
+      margin-top: 2px;
+    }
+
+    /* Form Controls with Numbered Step Badges */
+    .form-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .two-col-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 580px) {
+      .two-col-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .field-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .field-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--ink-900);
+    }
+
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      background: var(--teal-50);
+      border: 1px solid var(--teal-100);
+      color: var(--teal-800);
+      font-size: 11px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+
+    .unit-note {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--ink-500);
+    }
+
+    .field-hint {
+      font-size: 11.5px;
+      color: var(--ink-500);
+      line-height: 1.4;
+    }
+
+    /* Tactile Pill Choice Buttons (Replaces sliding segmented box) */
+    .choice-group {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .choice-pill {
+      min-height: 46px;
+      padding: 10px 8px;
+      border-radius: 12px;
+      border: 1.5px solid var(--line);
+      background: var(--surface-soft);
+      color: var(--ink-700);
+      font-family: inherit;
+      font-size: 12.8px;
+      font-weight: 650;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-align: center;
+      white-space: nowrap;
+      transition: all 0.18s var(--ease);
+    }
+
+    .choice-pill:hover {
+      border-color: var(--line-strong);
+      background: #ffffff;
+    }
+
+    .choice-pill .radio-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #cbd5e1;
+      flex-shrink: 0;
+      position: relative;
+      transition: all 0.18s ease;
+    }
+
+    .choice-pill[aria-checked="true"] {
+      background: var(--teal-50);
+      border-color: var(--teal-700);
+      color: var(--teal-900);
+      box-shadow: 0 2px 10px rgba(15, 118, 110, 0.10);
+    }
+
+    .choice-pill[aria-checked="true"] .radio-dot {
+      border-color: var(--teal-700);
+      background: var(--teal-700);
+      box-shadow: inset 0 0 0 3px #ffffff;
+    }
+
+    .choice-pill.risk-pill[aria-checked="true"] {
+      background: var(--high-bg);
+      border-color: var(--high-ring);
+      color: var(--high-fg);
+      box-shadow: 0 2px 10px rgba(220, 38, 38, 0.10);
+    }
+
+    .choice-pill.risk-pill[aria-checked="true"] .radio-dot {
+      border-color: var(--high-ring);
+      background: var(--high-ring);
+      box-shadow: inset 0 0 0 3px #ffffff;
+    }
+
+    /* 3-Option Status Gizi Cards */
+    .bmi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    @media (max-width: 520px) {
+      .bmi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .bmi-card {
+      border: 1.5px solid var(--line);
+      background: var(--surface-soft);
+      border-radius: 13px;
+      padding: 11px 13px;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      transition: all 0.18s var(--ease);
+    }
+
+    .bmi-card:hover {
+      border-color: var(--line-strong);
+      background: #ffffff;
+    }
+
+    .bmi-card[aria-checked="true"] {
+      background: var(--teal-50);
+      border-color: var(--teal-700);
+      box-shadow: 0 2px 10px rgba(15, 118, 110, 0.10);
+    }
+
+    .bmi-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-900);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .bmi-card[aria-checked="true"] .bmi-title {
+      color: var(--teal-900);
+    }
+
+    .bmi-chip {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+      background: #e2e8e6;
+      color: var(--ink-700);
+    }
+
+    .bmi-card[aria-checked="true"] .bmi-chip {
+      background: var(--teal-100);
+      color: var(--teal-900);
+    }
+
+    .bmi-sub {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ink-500);
+    }
+
+    .bmi-calc-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--teal-800);
+      background: #ffffff;
+      border: 1.5px solid var(--teal-700);
+      border-radius: 99px;
+      padding: 5px 12px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(15, 118, 110, 0.12);
+      transition: background 0.16s ease, color 0.16s ease, transform 0.12s ease, box-shadow 0.16s ease;
+    }
+
+    .bmi-calc-toggle:hover {
+      background: var(--teal-700);
+      color: #ffffff;
+      box-shadow: 0 4px 10px rgba(15, 118, 110, 0.22);
+    }
+
+    .bmi-calc-toggle:active {
+      transform: scale(0.97);
+    }
+
+    .bmi-calc-toggle .chev {
+      transition: transform 0.22s var(--ease);
+    }
+
+    .bmi-calc-toggle[aria-expanded="true"] {
+      background: var(--teal-700);
+      color: #ffffff;
+    }
+
+    .bmi-calc-toggle[aria-expanded="true"] .chev {
+      transform: rotate(180deg);
+    }
+
+    .bmi-calc-box {
+      padding: 12px 13px;
+      border-radius: 12px;
+      background: var(--teal-50);
+      border: 1.5px solid var(--teal-100);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .bmi-calc-box.hidden {
+      display: none;
+    }
+
+    .bmi-calc-box input {
+      height: 40px;
+      padding: 0 11px;
+      border: 1.5px solid var(--line-strong);
+      border-radius: 9px;
+      font-size: 13.5px;
+      font-weight: 600;
+      width: 100%;
+      background: #ffffff;
+      outline: none;
+    }
+
+    .bmi-calc-box input:focus {
+      border-color: var(--teal-700);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+    }
+
+    .bmi-calc-res {
+      grid-column: 1 / -1;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--teal-900);
+      background: #ffffff;
+      border: 1px solid var(--teal-100);
+      border-radius: 8px;
+      padding: 6px 10px;
+      text-align: center;
+    }
+
+    /* TLR2 Slider Block */
+    .tlr-box {
+      background: var(--surface-soft);
+      border: 1.5px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .tlr-top-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .tlr-top-row input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 7px;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--teal-700) var(--pct, 18%), #dce4e1 var(--pct, 18%));
+      cursor: pointer;
+      outline: none;
+    }
+
+    .tlr-top-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3.5px solid var(--teal-700);
+      box-shadow: 0 2px 8px rgba(15, 118, 110, 0.28);
+      cursor: grab;
+    }
+
+    .tlr-num-wrap {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #ffffff;
+      border: 1.5px solid var(--line-strong);
+      border-radius: 10px;
+      padding: 0 10px;
+      height: 40px;
+    }
+
+    .tlr-num-wrap:focus-within {
+      border-color: var(--teal-700);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+    }
+
+    .tlr-num-input {
+      width: 58px;
+      border: none;
+      background: transparent;
+      color: var(--teal-900);
+      font-family: inherit;
+      font-size: 14.5px;
+      font-weight: 800;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      outline: none;
+    }
+
+    .tlr-num-unit {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink-500);
+    }
+
+    .tlr-level-pill {
+      align-self: flex-start;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: var(--teal-50);
+      color: var(--teal-800);
+    }
+
+    /* Action Footer */
+    .action-row {
+      margin-top: 22px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-predict {
+      flex: 1;
+      min-height: 50px;
+      padding: 13px 20px;
+      border: none;
+      border-radius: 13px;
+      background: linear-gradient(135deg, var(--teal-800) 0%, var(--teal-600) 100%);
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 14.5px;
+      font-weight: 750;
+      letter-spacing: 0.45px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      box-shadow: 0 8px 20px rgba(15, 118, 110, 0.24);
+      transition: transform 0.14s var(--ease), box-shadow 0.2s ease, filter 0.2s ease;
+    }
+
+    .btn-predict:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(15, 118, 110, 0.30);
+      filter: brightness(1.03);
+    }
+
+    .btn-predict:active {
+      transform: scale(0.99);
+    }
+
+    .btn-reset {
+      min-height: 50px;
+      padding: 0 18px;
+      border: 1.5px solid var(--line);
+      border-radius: 13px;
+      background: #ffffff;
+      color: var(--ink-700);
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .btn-reset:hover {
+      background: var(--surface-soft);
+      border-color: var(--line-strong);
+      color: var(--teal-800);
+    }
+
+    /* Right Panel: Idle State */
+    .idle-hint {
+      flex: 1;
+      min-height: 360px;
+      padding: 36px 24px;
+      border-radius: 16px;
+      border: 1.5px dashed var(--line-strong);
+      background: var(--surface-soft);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 14px;
+      font-size: 14px;
+      color: var(--ink-500);
+      line-height: 1.6;
+    }
+
+    .idle-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: var(--teal-50);
+      border: 1px solid var(--teal-100);
+      color: var(--teal-700);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .idle-icon svg {
+      width: 26px;
+      height: 26px;
+    }
+
+    .idle-hint strong {
+      color: var(--teal-800);
+    }
+
+    .result-view.hidden,
+    .idle-hint.hidden {
+      display: none;
+    }
+
+    /* Result View with Circular Radial SVG Ring (Visually distinct from NRS linear bar) */
+    .result-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .result-view.animate-in {
+      animation: fadeSlide 0.35s var(--ease) both;
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-metric {
+      border-radius: 16px;
+      padding: 20px;
+      border: 1.5px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      transition: background 0.25s ease, border-color 0.25s ease;
+    }
+
+    @media (max-width: 460px) {
+      .hero-metric {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+
+    .hero-metric.low { background: var(--low-bg); border-color: var(--low-bd); }
+    .hero-metric.moderate { background: var(--mod-bg); border-color: var(--mod-bd); }
+    .hero-metric.high { background: var(--high-bg); border-color: var(--high-bd); }
+
+    .ring-wrap {
+      position: relative;
+      width: 118px;
+      height: 118px;
+      flex-shrink: 0;
+    }
+
+    .ring-svg {
+      width: 118px;
+      height: 118px;
+      transform: rotate(-90deg);
+    }
+
+    .ring-bg {
+      fill: none;
+      stroke: rgba(15, 23, 42, 0.08);
+      stroke-width: 10;
+    }
+
+    .ring-fg {
+      fill: none;
+      stroke: var(--teal-700);
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-dasharray: 301.59;
+      stroke-dashoffset: 301.59;
+      transition: stroke-dashoffset 0.65s var(--ease), stroke 0.25s ease;
+    }
+
+    .hero-metric.low .ring-fg { stroke: var(--low-ring); }
+    .hero-metric.moderate .ring-fg { stroke: var(--mod-ring); }
+    .hero-metric.high .ring-fg { stroke: var(--high-ring); }
+
+    .ring-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ring-pct {
+      font-size: 24px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+      color: var(--ink-900);
+    }
+
+    .ring-sub {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--ink-500);
+      margin-top: 1px;
+    }
+
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .hero-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--ink-500);
+    }
+
+    .category-badge {
+      display: inline-flex;
+      align-self: flex-start;
+      padding: 7px 14px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.45px;
+      color: #ffffff;
+    }
+
+    @media (max-width: 460px) {
+      .category-badge { align-self: center; }
+    }
+
+    .hero-metric.low .category-badge { background: var(--low-ring); }
+    .hero-metric.moderate .category-badge { background: var(--mod-ring); }
+    .hero-metric.high .category-badge { background: var(--high-ring); }
+
+    .consensus-pill {
+      font-size: 12.5px;
+      font-weight: 650;
+      color: var(--ink-700);
+    }
+
+    /* Method Distribution Section */
+    .section-block {
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 15px 16px;
+    }
+
+    .sec-title {
+      font-size: 12px;
+      font-weight: 750;
+      color: var(--ink-700);
+      margin-bottom: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .model-row {
+      display: grid;
+      grid-template-columns: 108px minmax(0, 1fr) 44px;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--ink-700);
+    }
+
+    .model-row:last-child { margin-bottom: 0; }
+
+    .model-row.primary-model {
+      color: var(--ink-900);
+      font-weight: 750;
+    }
+
+    .model-row > span:last-child {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .prob-bar-bg {
+      height: 8px;
+      background: #e2e8e6;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .prob-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.55s var(--ease);
+    }
+
+    /* XAI Factor Chips */
+    .factor-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .factor-tag {
+      font-size: 11.5px;
+      font-weight: 650;
+      padding: 5px 10px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .factor-tag.up {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .factor-tag.down {
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .factor-tag.neutral {
+      background: #ffffff;
+      color: #334155;
+      border: 1px solid var(--line);
+    }
+
+    .clinical-rec {
+      padding: 13px 15px;
+      border-radius: 13px;
+      background: var(--teal-50);
+      border: 1px solid var(--teal-100);
+      font-size: 12.5px;
+      line-height: 1.52;
+      color: var(--teal-900);
+    }
+
+    .disclaimer {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-left: 3.5px solid var(--teal-700);
+      border-radius: 14px;
+      padding: 13px 16px;
+      font-size: 12px;
+      color: var(--ink-500);
+      line-height: 1.5;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .topbar-inner { padding: 12px 16px; }
+      .clinical-tag { display: none; }
+      .page-container { padding: 14px 12px 24px; gap: 14px; }
+      .card { padding: 18px 16px; border-radius: 16px; }
+      .idle-hint { min-height: 190px; padding: 24px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v10" />
+            <path d="M9 8c-3.5 1-6 4-6 8.5 0 3 1.8 5 4.2 5 2 0 3.3-1.4 3.8-4V10c0-1-0.8-2-2-2z" />
+            <path d="M15 8c3.5 1 6 4 6 8.5 0 3-1.8 5-4.2 5-2 0-3.3-1.4-3.8-4V10c0-1 0.8-2 2-2z" />
+          </svg>
+        </div>
+        <div class="brand-copy">
+          <h1>Pulmo<span>Sense</span></h1>
+          <p>Tuberculosis Biomarker &amp; Clinical Risk Assessment</p>
+        </div>
+      </div>
+      <div class="clinical-tag">
+        <span class="clinical-dot" aria-hidden="true"></span>
+        <span>Skrining Klinis TB</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-container">
+    <div class="bento-grid">
+      <!-- Kolom Kiri: Form Parameter Klinis & Biomarker -->
+      <section class="card" aria-label="Input Parameter Klinis Pasien">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Profil Klinis &amp; Biomarker Pasien</h2>
+            <p class="card-subtitle">Lengkapi 5 parameter klinis dan laboratorium di bawah ini.</p>
+          </div>
+        </div>
+
+        <form id="tbForm" novalidate onsubmit="event.preventDefault(); calculateTbPrediction();">
+          <div class="form-stack">
+
+            <!-- 1. Riwayat Kontak TB -->
+            <div class="field">
+              <div class="field-label-row">
+                <label class="field-label" id="kontakLabel">
+                  <span class="step-badge">1</span>
+                  <span>Riwayat Kontak Tuberkulosis</span>
+                </label>
+                <span class="unit-note">Transmisi Epidemiologis</span>
+              </div>
+              <input type="hidden" id="riwayatKontak" value="0" />
+              <div class="choice-group" id="kontakGroup" role="radiogroup" aria-labelledby="kontakLabel">
+                <button type="button" class="choice-pill" role="radio" aria-checked="true" data-val="0" onclick="setChoice('riwayatKontak','kontakGroup',0)">
+                  <span class="radio-dot" aria-hidden="true"></span>
+                  <span>Tidak Ada Kontak</span>
+                </button>
+                <button type="button" class="choice-pill risk-pill" role="radio" aria-checked="false" data-val="1" onclick="setChoice('riwayatKontak','kontakGroup',1)">
+                  <span class="radio-dot" aria-hidden="true"></span>
+                  <span>Ada Kontak Erat TB</span>
+                </button>
+              </div>
+              <span class="field-hint">Riwayat tinggal serumah atau kontak dekat dengan penderita TB paru aktif.</span>
+            </div>
+
+            <!-- 2 & 3. Jenis Kelamin & Status Anti-HIV -->
+            <div class="two-col-row">
+              <div class="field">
+                <label class="field-label" id="jkLabel">
+                  <span class="step-badge">2</span>
+                  <span>Jenis Kelamin</span>
+                </label>
+                <input type="hidden" id="jenisKelamin" value="0" />
+                <div class="choice-group" id="jkGroup" role="radiogroup" aria-labelledby="jkLabel">
+                  <button type="button" class="choice-pill" role="radio" aria-checked="true" data-val="0" onclick="setChoice('jenisKelamin','jkGroup',0)">
+                    <span class="radio-dot" aria-hidden="true"></span>
+                    <span>Perempuan</span>
+                  </button>
+                  <button type="button" class="choice-pill" role="radio" aria-checked="false" data-val="1" onclick="setChoice('jenisKelamin','jkGroup',1)">
+                    <span class="radio-dot" aria-hidden="true"></span>
+                    <span>Laki-laki</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="field">
+                <label class="field-label" id="hivLabel">
+                  <span class="step-badge">3</span>
+                  <span>Status Imunologi Anti-HIV</span>
+                </label>
+                <input type="hidden" id="antiHiv" value="0" />
+                <div class="choice-group" id="hivGroup" role="radiogroup" aria-labelledby="hivLabel">
+                  <button type="button" class="choice-pill" role="radio" aria-checked="true" data-val="0" onclick="setChoice('antiHiv','hivGroup',0)">
+                    <span class="radio-dot" aria-hidden="true"></span>
+                    <span>Non-Reaktif</span>
+                  </button>
+                  <button type="button" class="choice-pill risk-pill" role="radio" aria-checked="false" data-val="1" onclick="setChoice('antiHiv','hivGroup',1)">
+                    <span class="radio-dot" aria-hidden="true"></span>
+                    <span>Reaktif</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Status Gizi / Interpretasi IMT (BMI) -->
+            <div class="field">
+              <div class="field-label-row">
+                <label class="field-label" id="bmiLabel">
+                  <span class="step-badge">4</span>
+                  <span>Status Gizi / Interpretasi IMT (BMI)</span>
+                </label>
+                <button type="button" id="bmiCalcToggle" class="bmi-calc-toggle" aria-expanded="false" onclick="toggleBmiCalc()">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="4" y="2" width="16" height="20" rx="2" />
+                    <line x1="8" y1="6" x2="16" y2="6" />
+                    <line x1="8" y1="11" x2="8.01" y2="11" />
+                    <line x1="12" y1="11" x2="12.01" y2="11" />
+                    <line x1="16" y1="11" x2="16.01" y2="11" />
+                    <line x1="8" y1="15" x2="8.01" y2="15" />
+                    <line x1="12" y1="15" x2="12.01" y2="15" />
+                    <line x1="16" y1="15" x2="16.01" y2="15" />
+                  </svg>
+                  <span>Kalkulator BB &amp; TB</span>
+                  <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+              </div>
+              <input type="hidden" id="interpretasiBmi" value="1" />
+              <div class="bmi-grid" id="bmiGroup" role="radiogroup" aria-labelledby="bmiLabel">
+                <button type="button" class="bmi-card" role="radio" aria-checked="false" data-val="0" onclick="setBmiCategory(0)">
+                  <div class="bmi-title"><span>Gizi Kurang</span><span class="bmi-chip">Kurus</span></div>
+                  <div class="bmi-sub">IMT &lt; 18,5 kg/m&sup2;</div>
+                </button>
+                <button type="button" class="bmi-card" role="radio" aria-checked="true" data-val="1" onclick="setBmiCategory(1)">
+                  <div class="bmi-title"><span>Gizi Normal</span><span class="bmi-chip">Ideal</span></div>
+                  <div class="bmi-sub">IMT 18,5 &ndash; 24,9 kg/m&sup2;</div>
+                </button>
+                <button type="button" class="bmi-card" role="radio" aria-checked="false" data-val="2" onclick="setBmiCategory(2)">
+                  <div class="bmi-title"><span>Gizi Lebih</span><span class="bmi-chip">Gemuk</span></div>
+                  <div class="bmi-sub">IMT &ge; 25,0 kg/m&sup2;</div>
+                </button>
+              </div>
+              <div id="bmiCalcBox" class="bmi-calc-box hidden">
+                <input type="number" id="bbInput" placeholder="Berat (kg), mis. 52" min="20" max="200" step="0.5" oninput="autoCalcBmi()" />
+                <input type="number" id="tbInput" placeholder="Tinggi (cm), mis. 165" min="100" max="220" step="0.5" oninput="autoCalcBmi()" />
+                <span id="bmiCalcText" class="bmi-calc-res">IMT: &mdash;</span>
+              </div>
+            </div>
+
+            <!-- 5. Kadar Biomarker Imunologi TLR2 -->
+            <div class="field">
+              <div class="field-label-row">
+                <label class="field-label" for="tlr2Range">
+                  <span class="step-badge">5</span>
+                  <span>Kadar Biomarker Imunologi TLR2</span>
+                </label>
+                <span class="unit-note">Toll-Like Receptor 2 (ng/mL)</span>
+              </div>
+              <div class="tlr-box">
+                <div class="tlr-top-row">
+                  <input type="range" id="tlr2Range" min="5" max="85" step="0.1" value="19.6" oninput="syncTlr2(this.value)" />
+                  <div class="tlr-num-wrap">
+                    <input type="number" id="tlr2Input" class="tlr-num-input" min="1" max="150" step="0.1" value="19.6" oninput="syncTlr2(this.value)" />
+                    <span class="tlr-num-unit">ng/mL</span>
+                  </div>
+                </div>
+                <span id="tlr2LevelPill" class="tlr-level-pill">Ekspresi TLR2 Normal/Moderat (19,6 ng/mL)</span>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="action-row">
+            <button type="submit" class="btn-predict">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+              </svg>
+              <span>ANALISIS RISIKO TB</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Kolom Kanan: Panel Hasil Prediksi (Muncul Setelah Tombol Analisis Ditekan) -->
+      <section class="card" aria-label="Hasil Analisis Risiko Tuberkulosis">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Hasil Prediksi &amp; Interpretasi</h2>
+            <p class="card-subtitle">Estimasi probabilitas risiko dan faktor penentu pasien.</p>
+          </div>
+        </div>
+
+        <div id="idleHint" class="idle-hint">
+          <div class="idle-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+          </div>
+          <div id="idleText">
+            Masukkan profil klinis dan kadar biomarker pasien, lalu tekan tombol <strong>ANALISIS RISIKO TB</strong> untuk menampilkan hasil prediksi.
+          </div>
+        </div>
+
+        <div id="resultView" class="result-view hidden" aria-live="polite">
+          <!-- Hero Radial Risk Ring -->
+          <div id="heroMetric" class="hero-metric low">
+            <div class="ring-wrap">
+              <svg class="ring-svg" viewBox="0 0 112 112" aria-hidden="true">
+                <circle class="ring-bg" cx="56" cy="56" r="48" />
+                <circle class="ring-fg" id="ringFg" cx="56" cy="56" r="48" />
+              </svg>
+              <div class="ring-center">
+                <span class="ring-pct" id="probOutput">0,0%</span>
+                <span class="ring-sub">Risiko TB</span>
+              </div>
+            </div>
+            <div class="hero-copy">
+              <span class="hero-eyebrow">Status Klasifikasi Risiko</span>
+              <div class="category-badge" id="catBadge">&mdash;</div>
+              <div class="consensus-pill" id="consensusSummary">&mdash;</div>
+            </div>
+          </div>
+
+          <!-- Distribusi Keyakinan per Metode (Tanpa Nilai Akurasi) -->
+          <div class="section-block">
+            <div class="sec-title">
+              <span>Distribusi Keyakinan per Metode</span>
+            </div>
+            <div class="model-row primary-model">
+              <span>SVM RBF</span>
+              <div class="prob-bar-bg"><div id="barSvm" class="prob-bar-fill" style="width:0%; background:#0f766e;"></div></div>
+              <span id="pctSvm">0%</span>
+            </div>
+            <div class="model-row">
+              <span>Extra Trees</span>
+              <div class="prob-bar-bg"><div id="barEt" class="prob-bar-fill" style="width:0%; background:#14b8a6;"></div></div>
+              <span id="pctEt">0%</span>
+            </div>
+            <div class="model-row">
+              <span>Random Forest</span>
+              <div class="prob-bar-bg"><div id="barRf" class="prob-bar-fill" style="width:0%; background:#0ea5e9;"></div></div>
+              <span id="pctRf">0%</span>
+            </div>
+          </div>
+
+          <!-- Explainable AI Faktor Pasien -->
+          <div class="section-block">
+            <div class="sec-title">
+              <span>Faktor Penentu pada Pasien Ini (Explainable AI)</span>
+            </div>
+            <div id="factorList" class="factor-list"></div>
+          </div>
+
+          <!-- Rekomendasi Klinis -->
+          <div id="clinicalRec" class="clinical-rec"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="disclaimer">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px; color:var(--teal-700);">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
+      </svg>
+      <div><strong>Catatan Pendukung Keputusan Klinis:</strong> Hasil estimasi risiko ini digunakan sebagai alat bantu skrining klinis berbasis parameter paparan dan biomarker imunologi TLR2, serta wajib dikonfirmasi dengan pemeriksaan bakteriologis (TCM/BTA) dan evaluasi medis.</div>
+    </div>
+  </main>
+
+  <!-- Embedded SOTA TB Models (Self-contained Single File for Static Web & GitHub Pages) -->
+  <!-- TB_MODEL_INLINE_START -->
+  <script>window.TB_MODEL = {"model_name":"SVM RBF (Primary 96.3%) + Extra Trees & Random Forest Consensus","features":["Riwayat_Kontak","Jenis_Kelamin","Interpretasi_BMI","Anti_HIV","TLR2"],"cohort_stats":{"n_samples":88,"tlr2_min":8.1,"tlr2_q25":14.3,"tlr2_median":19.6,"tlr2_q75":24.3,"tlr2_max":81.2},"sota_metrics":{"svm_test_acc_pct":96.3,"svm_cv5_acc_pct":89.74,"svm_rep_cv_pct":88.64,"svm_gap_pct":-0.25,"et_test_acc_pct":92.59,"rf_test_acc_pct":92.59},"svm_rbf":{"mean":[0.63934426,0.63934426,0.63934426,0.16393443,21.7295082],"scale":[0.48019077,0.48019077,0.60144054,0.37021606,12.37288607],"gamma":0.2,"support_vectors":[[0.75106762,-1.33143805,0.59965319,-0.44280744,-0.01854929],[0.75106762,0.75106762,0.59965319,-0.44280744,-0.25293276],[0.75106762,0.75106762,-1.06302157,-0.44280744,-0.78635721],[-1.33143805,-1.33143805,0.59965319,-0.44280744,0.32898483],[-1.33143805,0.75106762,-1.06302157,2.25831796,0.30473826],[0.75106762,-1.33143805,-1.06302157,-0.44280744,-0.8671791],[0.75106762,0.75106762,-1.06302157,-0.44280744,-0.16402868],[0.75106762,0.75106762,0.59965319,-0.44280744,-0.70553533],[-1.33143805,-1.33143805,2.26232796,-0.44280744,-0.71361751],[-1.33143805,0.75106762,-1.06302157,-0.44280744,-0.25293276],[-1.33143805,0.75106762,-1.06302157,2.25831796,-0.98841193],[0.75106762,-1.33143805,0.59965319,-0.44280744,-0.95608318],[-1.33143805,0.75106762,0.59965319,2.25831796,0.15925887],[0.75106762,0.75106762,-1.06302157,-0.44280744,-0.34183683],[-1.33143805,0.75106762,-1.06302157,-0.44280744,0.07035479],[-1.33143805,-1.33143805,-1.06302157,-0.44280744,-0.17211087],[-1.33143805,0.75106762,0.59965319,-0.44280744,-0.7944394],[-1.33143805,-1.33143805,0.59965319,-0.44280744,-0.18827525],[0.75106762,-1.33143805,-1.06302157,-0.44280744,-0.78635721],[-1.33143805,0.75106762,0.59965319,-0.44280744,1.46857344],[0.75106762,0.75106762,-1.06302157,-0.44280744,-0.78635721],[0.75106762,0.75106762,2.26232796,2.25831796,-0.46306966],[0.75106762,0.75106762,0.59965319,-0.44280744,0.54720392],[0.75106762,-1.33143805,-1.06302157,-0.44280744,1.23418996],[0.75106762,0.75106762,0.59965319,-0.44280744,1.94542257],[0.75106762,-1.33143805,-1.06302157,2.25831796,0.15117668],[-1.33143805,0.75106762,0.59965319,-0.44280744,-0.21252181],[0.75106762,0.75106762,-1.06302157,-0.44280744,-0.17211087],[0.75106762,0.75106762,0.59965319,2.25831796,0.18350543],[0.75106762,-1.33143805,0.59965319,-0.44280744,-0.12361774],[0.75106762,0.75106762,-1.06302157,2.25831796,0.80583396],[0.75106762,-1.33143805,0.59965319,2.25831796,-0.92375442],[0.75106762,0.75106762,0.59965319,-0.44280744,-0.59238468],[0.75106762,0.75106762,0.59965319,-0.44280744,4.80651737],[0.75106762,-1.33143805,2.26232796,-0.44280744,0.43405328],[0.75106762,0.75106762,-1.06302157,-0.44280744,-0.69745314],[0.75106762,0.75106762,-1.06302157,2.25831796,-0.2933437],[0.75106762,-1.33143805,0.59965319,-0.44280744,-0.48731623],[0.75106762,0.75106762,-1.06302157,-0.44280744,3.82857254],[0.75106762,-1.33143805,0.59965319,-0.44280744,-0.99649412],[0.75106762,0.75106762,0.59965319,-0.44280744,-0.72978189],[-1.33143805,-1.33143805,0.59965319,-0.44280744,0.32090264],[0.75106762,0.75106762,-1.06302157,-0.44280744,-0.31759027],[0.75106762,-1.33143805,2.26232796,-0.44280744,-0.68128876]],"dual_coef":[-2.0,-2.0,-2.0,-2.0,-0.52222753,-1.55767353,-2.0,-2.0,-1.39296062,-0.56603028,-0.73277236,-2.0,-0.84580859,-2.0,-0.41448563,-0.02586885,-1.82796887,-0.45546442,-2.0,-1.52380069,2.0,0.72021255,0.14381035,1.40812579,0.76860015,0.63008032,2.0,1.88131168,0.13652095,1.97782398,0.24869127,0.28711677,1.56534122,0.56287358,0.20300289,2.0,0.67045179,2.0,0.27909036,2.0,2.0,2.0,2.0,0.38200769],"intercept":0.19521237,"platt_slope":1.65177901,"platt_intercept":-0.3058037},"et_trees":[[{"l":0,"f":0,"t":0.3977,"left":1,"right":14},{"l":0,"f":1,"t":0.04398,"left":2,"right":7},{"l":0,"f":4,"t":23.92168,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.71449,"left":5,"right":6},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.53561,"left":8,"right":13},{"l":0,"f":2,"t":0.68684,"left":9,"right":10},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":31.54707,"left":11,"right":12},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.90702,"left":15,"right":24},{"l":0,"f":4,"t":59.49781,"left":16,"right":23},{"l":0,"f":4,"t":12.05579,"left":17,"right":20},{"l":0,"f":2,"t":0.89232,"left":18,"right":19},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":4,"t":38.82852,"left":21,"right":22},{"l":1,"p":[0.20833,0.79167]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.77835,"left":1,"right":22},{"l":0,"f":2,"t":1.34512,"left":2,"right":17},{"l":0,"f":1,"t":0.20881,"left":3,"right":10},{"l":0,"f":2,"t":0.50088,"left":4,"right":7},{"l":0,"f":0,"t":0.08629,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":4,"t":14.01855,"left":8,"right":9},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[0.55556,0.44444]},{"l":0,"f":2,"t":0.83974,"left":11,"right":14},{"l":0,"f":0,"t":0.14177,"left":12,"right":13},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":4,"t":73.0104,"left":15,"right":16},{"l":1,"p":[0.53333,0.46667]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":26.98699,"left":18,"right":21},{"l":0,"f":4,"t":12.97091,"left":19,"right":20},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":15.33865,"left":23,"right":26},{"l":0,"f":4,"t":9.98339,"left":24,"right":25},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":20.50718,"left":27,"right":28},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.49443,"left":29,"right":30},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.54024,"left":1,"right":20},{"l":0,"f":0,"t":0.16627,"left":2,"right":9},{"l":0,"f":4,"t":37.99024,"left":3,"right":8},{"l":0,"f":2,"t":0.92393,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":13.84106,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.8,0.2]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":20.76754,"left":10,"right":15},{"l":0,"f":2,"t":1.53879,"left":11,"right":14},{"l":0,"f":1,"t":0.23915,"left":12,"right":13},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.35714,0.64286]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":45.67794,"left":16,"right":19},{"l":0,"f":1,"t":0.53163,"left":17,"right":18},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":10.20367,"left":21,"right":22},{"l":1,"p":[1.0,0.0]},{"l":0,"f":0,"t":0.00961,"left":23,"right":24},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.65643,"left":1,"right":10},{"l":0,"f":2,"t":0.58054,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.98583,"left":4,"right":9},{"l":0,"f":4,"t":13.53456,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.77102,"left":7,"right":8},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.90639,"left":11,"right":20},{"l":0,"f":2,"t":1.55165,"left":12,"right":19},{"l":0,"f":2,"t":0.23496,"left":13,"right":16},{"l":0,"f":1,"t":0.67134,"left":14,"right":15},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":1,"t":0.00076,"left":17,"right":18},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":1,"t":0.39858,"left":1,"right":14},{"l":0,"f":3,"t":0.55205,"left":2,"right":13},{"l":0,"f":0,"t":0.71207,"left":3,"right":8},{"l":0,"f":2,"t":0.51246,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.94914,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":23.53698,"left":9,"right":12},{"l":0,"f":2,"t":0.81817,"left":10,"right":11},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.28603,"left":15,"right":24},{"l":0,"f":4,"t":54.61481,"left":16,"right":23},{"l":0,"f":3,"t":0.60728,"left":17,"right":20},{"l":0,"f":2,"t":0.91357,"left":18,"right":19},{"l":1,"p":[0.42857,0.57143]},{"l":1,"p":[0.53333,0.46667]},{"l":0,"f":0,"t":0.42639,"left":21,"right":22},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.50913,"left":1,"right":14},{"l":0,"f":4,"t":24.38105,"left":2,"right":9},{"l":0,"f":4,"t":21.23699,"left":3,"right":8},{"l":0,"f":2,"t":0.07635,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":16.9327,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.35137,"left":10,"right":13},{"l":0,"f":4,"t":25.73998,"left":11,"right":12},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":76.75554,"left":15,"right":22},{"l":0,"f":3,"t":0.16653,"left":16,"right":21},{"l":0,"f":2,"t":1.27424,"left":17,"right":20},{"l":0,"f":1,"t":0.78826,"left":18,"right":19},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.03092,"left":1,"right":24},{"l":0,"f":1,"t":0.80453,"left":2,"right":13},{"l":0,"f":4,"t":11.35071,"left":3,"right":8},{"l":0,"f":2,"t":0.83351,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":9.53795,"left":6,"right":7},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":3,"t":0.64749,"left":9,"right":12},{"l":0,"f":4,"t":17.35955,"left":10,"right":11},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[0.54545,0.45455]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.31393,"left":14,"right":21},{"l":0,"f":0,"t":0.25142,"left":15,"right":18},{"l":0,"f":4,"t":13.43435,"left":16,"right":17},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.88889,0.11111]},{"l":0,"f":4,"t":78.42864,"left":19,"right":20},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.38673,"left":22,"right":23},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":20.1639,"left":25,"right":28},{"l":0,"f":0,"t":0.14965,"left":26,"right":27},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.91659,"left":1,"right":12},{"l":0,"f":4,"t":10.55652,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.04327,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.21202,"left":6,"right":9},{"l":0,"f":1,"t":0.72722,"left":7,"right":8},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.85714,0.14286]},{"l":0,"f":1,"t":0.92949,"left":10,"right":11},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":15.05616,"left":13,"right":22},{"l":0,"f":3,"t":0.23542,"left":14,"right":21},{"l":0,"f":4,"t":10.48856,"left":15,"right":18},{"l":0,"f":4,"t":9.53155,"left":16,"right":17},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":12.03237,"left":19,"right":20},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[0.16667,0.83333]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.7698,"left":23,"right":28},{"l":0,"f":2,"t":1.71981,"left":24,"right":27},{"l":0,"f":4,"t":29.07908,"left":25,"right":26},{"l":1,"p":[0.26667,0.73333]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":1,"t":0.08911,"left":1,"right":16},{"l":0,"f":4,"t":20.1862,"left":2,"right":9},{"l":0,"f":0,"t":0.61104,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.02601,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.84008,"left":7,"right":8},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.50416,"left":10,"right":15},{"l":0,"f":4,"t":27.92606,"left":11,"right":14},{"l":0,"f":2,"t":1.00208,"left":12,"right":13},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":39.31651,"left":17,"right":30},{"l":0,"f":4,"t":18.68282,"left":18,"right":23},{"l":0,"f":4,"t":10.30988,"left":19,"right":20},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":15.04396,"left":21,"right":22},{"l":1,"p":[0.44444,0.55556]},{"l":1,"p":[0.57143,0.42857]},{"l":0,"f":2,"t":0.49091,"left":24,"right":27},{"l":0,"f":3,"t":0.07414,"left":25,"right":26},{"l":1,"p":[0.375,0.625]},{"l":1,"p":[0.66667,0.33333]},{"l":0,"f":3,"t":0.99229,"left":28,"right":29},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":2,"t":0.72257,"left":31,"right":32},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":49.54801,"left":33,"right":36},{"l":0,"f":0,"t":0.92521,"left":34,"right":35},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":1,"t":0.48068,"left":1,"right":16},{"l":0,"f":3,"t":0.87778,"left":2,"right":15},{"l":0,"f":2,"t":0.22566,"left":3,"right":8},{"l":0,"f":4,"t":13.10357,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":36.69173,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.32037,"left":9,"right":12},{"l":0,"f":0,"t":0.16736,"left":10,"right":11},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":0,"t":0.47683,"left":13,"right":14},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.44608,"left":17,"right":28},{"l":0,"f":3,"t":0.05061,"left":18,"right":25},{"l":0,"f":0,"t":0.04562,"left":19,"right":22},{"l":0,"f":2,"t":0.61755,"left":20,"right":21},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.85714,0.14286]},{"l":0,"f":2,"t":0.09769,"left":23,"right":24},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.22222,0.77778]},{"l":0,"f":0,"t":0.30992,"left":26,"right":27},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.64781,"left":1,"right":16},{"l":0,"f":4,"t":34.23252,"left":2,"right":11},{"l":0,"f":4,"t":9.791,"left":3,"right":4},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":13.72553,"left":5,"right":8},{"l":0,"f":1,"t":0.13455,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":2,"t":1.60425,"left":9,"right":10},{"l":1,"p":[0.51613,0.48387]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.71781,"left":12,"right":13},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.28416,"left":14,"right":15},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.85067,"left":17,"right":18},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":80.0123,"left":1,"right":24},{"l":0,"f":4,"t":22.0074,"left":2,"right":15},{"l":0,"f":0,"t":0.28518,"left":3,"right":8},{"l":0,"f":3,"t":0.52051,"left":4,"right":7},{"l":0,"f":4,"t":14.44445,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.88889,0.11111]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":19.25823,"left":9,"right":12},{"l":0,"f":4,"t":18.05253,"left":10,"right":11},{"l":1,"p":[0.35294,0.64706]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":1,"t":0.44333,"left":13,"right":14},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":2,"t":1.52696,"left":16,"right":23},{"l":0,"f":1,"t":0.61069,"left":17,"right":20},{"l":0,"f":2,"t":0.41917,"left":18,"right":19},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":4,"t":27.73838,"left":21,"right":22},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.69863,"left":1,"right":20},{"l":0,"f":0,"t":0.55631,"left":2,"right":11},{"l":0,"f":2,"t":0.51549,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.39286,"left":5,"right":8},{"l":0,"f":4,"t":17.19187,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.8,0.2]},{"l":0,"f":4,"t":18.6601,"left":9,"right":10},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.8,0.2]},{"l":0,"f":3,"t":0.0579,"left":12,"right":19},{"l":0,"f":1,"t":0.41147,"left":13,"right":16},{"l":0,"f":4,"t":21.42614,"left":14,"right":15},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":4,"t":58.59135,"left":17,"right":18},{"l":1,"p":[0.26316,0.73684]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.93522,"left":21,"right":22},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.26016,"left":1,"right":16},{"l":0,"f":1,"t":0.60794,"left":2,"right":9},{"l":0,"f":2,"t":1.72759,"left":3,"right":8},{"l":0,"f":2,"t":0.30246,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.19454,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":10.34754,"left":10,"right":11},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.40721,"left":12,"right":15},{"l":0,"f":2,"t":0.28156,"left":13,"right":14},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":22.56916,"left":17,"right":26},{"l":0,"f":3,"t":0.21014,"left":18,"right":25},{"l":0,"f":2,"t":0.27128,"left":19,"right":22},{"l":0,"f":1,"t":0.92468,"left":20,"right":21},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":4,"t":20.73591,"left":23,"right":24},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":27.53233,"left":1,"right":18},{"l":0,"f":2,"t":1.39081,"left":2,"right":15},{"l":0,"f":0,"t":0.20382,"left":3,"right":8},{"l":0,"f":4,"t":18.76416,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.53455,"left":6,"right":7},{"l":1,"p":[0.77778,0.22222]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":12.59682,"left":9,"right":12},{"l":0,"f":3,"t":0.07511,"left":10,"right":11},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.23302,"left":13,"right":14},{"l":1,"p":[0.26316,0.73684]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.96005,"left":16,"right":17},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.91004,"left":19,"right":20},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.33431,"left":21,"right":22},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":37.42635,"left":23,"right":24},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.23296,"left":25,"right":26},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.91718,"left":1,"right":16},{"l":0,"f":4,"t":65.71461,"left":2,"right":15},{"l":0,"f":0,"t":0.39411,"left":3,"right":8},{"l":0,"f":4,"t":16.76886,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.5879,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.77778,0.22222]},{"l":0,"f":1,"t":0.38122,"left":9,"right":12},{"l":0,"f":2,"t":1.95973,"left":10,"right":11},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":26.91476,"left":13,"right":14},{"l":1,"p":[0.29412,0.70588]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":11.48563,"left":17,"right":20},{"l":0,"f":4,"t":10.10708,"left":18,"right":19},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.17748,"left":21,"right":22},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.97103,"left":23,"right":24},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.1351,"left":1,"right":22},{"l":0,"f":0,"t":0.76852,"left":2,"right":9},{"l":0,"f":4,"t":26.04352,"left":3,"right":8},{"l":0,"f":2,"t":0.34954,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":22.48736,"left":6,"right":7},{"l":1,"p":[0.9,0.1]},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.47343,"left":10,"right":15},{"l":0,"f":4,"t":37.63645,"left":11,"right":14},{"l":0,"f":4,"t":13.27127,"left":12,"right":13},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[0.14286,0.85714]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.17278,"left":16,"right":19},{"l":0,"f":4,"t":37.87202,"left":17,"right":18},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":27.2185,"left":20,"right":21},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.71445,"left":23,"right":28},{"l":0,"f":1,"t":0.1572,"left":24,"right":25},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.19408,"left":26,"right":27},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.77001,"left":29,"right":30},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":22.88284,"left":1,"right":20},{"l":0,"f":0,"t":0.67583,"left":2,"right":9},{"l":0,"f":3,"t":0.84018,"left":3,"right":8},{"l":0,"f":4,"t":13.33791,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.35831,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":17.55555,"left":10,"right":15},{"l":0,"f":2,"t":1.12836,"left":11,"right":14},{"l":0,"f":2,"t":0.63191,"left":12,"right":13},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.17924,"left":16,"right":19},{"l":0,"f":4,"t":22.4115,"left":17,"right":18},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":42.83461,"left":21,"right":32},{"l":0,"f":1,"t":0.02914,"left":22,"right":27},{"l":0,"f":4,"t":34.97044,"left":23,"right":26},{"l":0,"f":0,"t":0.40843,"left":24,"right":25},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":37.21128,"left":28,"right":31},{"l":0,"f":0,"t":0.33676,"left":29,"right":30},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":32.24752,"left":1,"right":18},{"l":0,"f":0,"t":0.88516,"left":2,"right":9},{"l":0,"f":3,"t":0.4566,"left":3,"right":8},{"l":0,"f":2,"t":1.21053,"left":4,"right":7},{"l":0,"f":1,"t":0.04328,"left":5,"right":6},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[0.88889,0.11111]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.87198,"left":10,"right":17},{"l":0,"f":4,"t":18.09425,"left":11,"right":14},{"l":0,"f":1,"t":0.71376,"left":12,"right":13},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":1,"t":0.52824,"left":15,"right":16},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.16667,0.83333]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.67479,"left":19,"right":20},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.9411,"left":21,"right":22},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.32441,"left":1,"right":10},{"l":0,"f":3,"t":0.41828,"left":2,"right":9},{"l":0,"f":2,"t":1.81952,"left":3,"right":8},{"l":0,"f":4,"t":30.39119,"left":4,"right":7},{"l":0,"f":2,"t":0.5352,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.35826,"left":11,"right":20},{"l":0,"f":4,"t":39.28267,"left":12,"right":19},{"l":0,"f":1,"t":0.09926,"left":13,"right":16},{"l":0,"f":2,"t":0.04529,"left":14,"right":15},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":2,"t":0.52902,"left":17,"right":18},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":67.09919,"left":1,"right":24},{"l":0,"f":4,"t":23.04413,"left":2,"right":15},{"l":0,"f":3,"t":0.9065,"left":3,"right":10},{"l":0,"f":1,"t":0.47777,"left":4,"right":7},{"l":0,"f":4,"t":17.63717,"left":5,"right":6},{"l":1,"p":[0.625,0.375]},{"l":1,"p":[0.71429,0.28571]},{"l":0,"f":2,"t":0.44513,"left":8,"right":9},{"l":1,"p":[0.46154,0.53846]},{"l":1,"p":[0.54545,0.45455]},{"l":0,"f":2,"t":0.82851,"left":11,"right":14},{"l":0,"f":4,"t":12.4709,"left":12,"right":13},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.91923,"left":16,"right":21},{"l":0,"f":2,"t":0.3441,"left":17,"right":18},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.91772,"left":19,"right":20},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.52377,"left":22,"right":23},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.42829,"left":1,"right":12},{"l":0,"f":3,"t":0.29838,"left":2,"right":11},{"l":0,"f":2,"t":1.12308,"left":3,"right":10},{"l":0,"f":1,"t":0.18856,"left":4,"right":7},{"l":0,"f":4,"t":16.03038,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":0,"f":4,"t":33.20587,"left":8,"right":9},{"l":1,"p":[0.88889,0.11111]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":34.16234,"left":13,"right":20},{"l":0,"f":3,"t":0.25783,"left":14,"right":19},{"l":0,"f":2,"t":1.33216,"left":15,"right":18},{"l":0,"f":4,"t":13.55682,"left":16,"right":17},{"l":1,"p":[0.55556,0.44444]},{"l":1,"p":[0.23529,0.76471]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":1,"t":0.69513,"left":1,"right":14},{"l":0,"f":3,"t":0.08661,"left":2,"right":13},{"l":0,"f":0,"t":0.17969,"left":3,"right":8},{"l":0,"f":4,"t":20.96979,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.71864,"left":6,"right":7},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.18693,"left":9,"right":12},{"l":0,"f":4,"t":11.23221,"left":10,"right":11},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":51.70174,"left":15,"right":24},{"l":0,"f":2,"t":1.97428,"left":16,"right":23},{"l":0,"f":2,"t":0.47232,"left":17,"right":20},{"l":0,"f":4,"t":30.44274,"left":18,"right":19},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.76017,"left":21,"right":22},{"l":1,"p":[0.875,0.125]},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":1,"t":0.80538,"left":1,"right":18},{"l":0,"f":4,"t":13.26896,"left":2,"right":9},{"l":0,"f":2,"t":1.13473,"left":3,"right":8},{"l":0,"f":2,"t":0.79047,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.54776,"left":6,"right":7},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.74522,"left":10,"right":17},{"l":0,"f":4,"t":25.64726,"left":11,"right":14},{"l":0,"f":2,"t":1.41897,"left":12,"right":13},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":36.52143,"left":15,"right":16},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.55874,"left":19,"right":32},{"l":0,"f":3,"t":0.76816,"left":20,"right":25},{"l":0,"f":4,"t":47.37805,"left":21,"right":24},{"l":0,"f":2,"t":0.26239,"left":22,"right":23},{"l":1,"p":[0.42857,0.57143]},{"l":1,"p":[0.53333,0.46667]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.79024,"left":26,"right":29},{"l":0,"f":4,"t":16.37466,"left":27,"right":28},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":0,"t":0.94168,"left":30,"right":31},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.74622,"left":1,"right":24},{"l":0,"f":2,"t":0.72712,"left":2,"right":11},{"l":0,"f":0,"t":0.23555,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.5692,"left":5,"right":8},{"l":0,"f":3,"t":0.14884,"left":6,"right":7},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.50561,"left":9,"right":10},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.99891,"left":12,"right":19},{"l":0,"f":4,"t":23.78612,"left":13,"right":16},{"l":0,"f":0,"t":0.37436,"left":14,"right":15},{"l":1,"p":[0.9,0.1]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":0,"t":0.32751,"left":17,"right":18},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":12.1687,"left":20,"right":21},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":23.83727,"left":22,"right":23},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.355,"left":25,"right":28},{"l":0,"f":0,"t":0.14454,"left":26,"right":27},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.48438,"left":1,"right":16},{"l":0,"f":4,"t":63.57814,"left":2,"right":15},{"l":0,"f":0,"t":0.32258,"left":3,"right":8},{"l":0,"f":4,"t":34.37087,"left":4,"right":7},{"l":0,"f":4,"t":16.50684,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.43425,"left":9,"right":12},{"l":0,"f":1,"t":0.64157,"left":10,"right":11},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.27273,0.72727]},{"l":0,"f":2,"t":1.10975,"left":13,"right":14},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.33645,"left":17,"right":18},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.00923,"left":1,"right":18},{"l":0,"f":0,"t":0.35226,"left":2,"right":9},{"l":0,"f":2,"t":1.22477,"left":3,"right":8},{"l":0,"f":4,"t":31.4153,"left":4,"right":7},{"l":0,"f":1,"t":0.98128,"left":5,"right":6},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[0.88889,0.11111]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":66.90782,"left":10,"right":17},{"l":0,"f":1,"t":0.60203,"left":11,"right":14},{"l":0,"f":4,"t":23.69297,"left":12,"right":13},{"l":1,"p":[0.44444,0.55556]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":15.6265,"left":15,"right":16},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.92553,"left":19,"right":28},{"l":0,"f":2,"t":0.34716,"left":20,"right":23},{"l":0,"f":0,"t":0.84107,"left":21,"right":22},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.3175,"left":24,"right":25},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.63445,"left":26,"right":27},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.4441,"left":1,"right":20},{"l":0,"f":4,"t":32.79604,"left":2,"right":15},{"l":0,"f":0,"t":0.62908,"left":3,"right":10},{"l":0,"f":1,"t":0.96544,"left":4,"right":7},{"l":0,"f":4,"t":14.60734,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":0,"f":4,"t":17.35482,"left":8,"right":9},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":0,"f":4,"t":22.41233,"left":11,"right":14},{"l":0,"f":1,"t":0.20403,"left":12,"right":13},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.05521,"left":16,"right":17},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.79295,"left":18,"right":19},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.56083,"left":21,"right":22},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.5865,"left":23,"right":30},{"l":0,"f":2,"t":0.29638,"left":24,"right":27},{"l":0,"f":0,"t":0.51365,"left":25,"right":26},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":23.94167,"left":28,"right":29},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.10865,"left":1,"right":18},{"l":0,"f":2,"t":1.82212,"left":2,"right":15},{"l":0,"f":0,"t":0.0711,"left":3,"right":10},{"l":0,"f":1,"t":0.45995,"left":4,"right":7},{"l":0,"f":4,"t":24.52304,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":4,"t":16.82434,"left":8,"right":9},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.85714,0.14286]},{"l":0,"f":4,"t":65.0673,"left":11,"right":14},{"l":0,"f":2,"t":0.26339,"left":12,"right":13},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.59103,"left":16,"right":17},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.46473,"left":19,"right":20},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.23886,"left":1,"right":14},{"l":0,"f":4,"t":52.0532,"left":2,"right":13},{"l":0,"f":0,"t":0.29836,"left":3,"right":8},{"l":0,"f":4,"t":12.66699,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.60679,"left":6,"right":7},{"l":1,"p":[0.875,0.125]},{"l":1,"p":[0.88889,0.11111]},{"l":0,"f":4,"t":40.43966,"left":9,"right":12},{"l":0,"f":2,"t":0.89211,"left":10,"right":11},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.26667,0.73333]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.49379,"left":15,"right":16},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.22032,"left":17,"right":24},{"l":0,"f":2,"t":0.9288,"left":18,"right":21},{"l":0,"f":4,"t":16.94565,"left":19,"right":20},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":0,"t":0.46171,"left":22,"right":23},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.65633,"left":1,"right":10},{"l":0,"f":2,"t":0.95732,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.32627,"left":4,"right":9},{"l":0,"f":2,"t":1.48686,"left":5,"right":8},{"l":0,"f":4,"t":25.74925,"left":6,"right":7},{"l":1,"p":[0.81818,0.18182]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.24722,"left":11,"right":18},{"l":0,"f":3,"t":0.51203,"left":12,"right":17},{"l":0,"f":4,"t":34.96705,"left":13,"right":16},{"l":0,"f":1,"t":0.5876,"left":14,"right":15},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.27778,0.72222]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.7361,"left":1,"right":18},{"l":0,"f":0,"t":0.69403,"left":2,"right":9},{"l":0,"f":2,"t":1.41008,"left":3,"right":8},{"l":0,"f":2,"t":0.39407,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":31.89356,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.82348,"left":10,"right":17},{"l":0,"f":1,"t":0.24648,"left":11,"right":14},{"l":0,"f":4,"t":21.08639,"left":12,"right":13},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":2,"t":0.40437,"left":15,"right":16},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.22691,"left":19,"right":20},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":30.95338,"left":1,"right":18},{"l":0,"f":2,"t":1.23868,"left":2,"right":15},{"l":0,"f":0,"t":0.54859,"left":3,"right":8},{"l":0,"f":3,"t":0.89177,"left":4,"right":7},{"l":0,"f":2,"t":0.02097,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.52351,"left":9,"right":12},{"l":0,"f":3,"t":0.7532,"left":10,"right":11},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.94285,"left":13,"right":14},{"l":1,"p":[0.27778,0.72222]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.65775,"left":16,"right":17},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.5952,"left":19,"right":20},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":38.42408,"left":21,"right":22},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.94285,"left":23,"right":24},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.19955,"left":25,"right":26},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.86728,"left":1,"right":18},{"l":0,"f":0,"t":0.11408,"left":2,"right":9},{"l":0,"f":2,"t":0.17058,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":37.96939,"left":5,"right":8},{"l":0,"f":3,"t":0.24314,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.31372,"left":10,"right":17},{"l":0,"f":1,"t":0.46807,"left":11,"right":14},{"l":0,"f":4,"t":13.77037,"left":12,"right":13},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[0.16667,0.83333]},{"l":0,"f":4,"t":59.35764,"left":15,"right":16},{"l":1,"p":[0.26316,0.73684]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.18926,"left":19,"right":22},{"l":0,"f":0,"t":0.79814,"left":20,"right":21},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.57208,"left":1,"right":12},{"l":0,"f":3,"t":0.34364,"left":2,"right":11},{"l":0,"f":4,"t":36.6185,"left":3,"right":10},{"l":0,"f":1,"t":0.9091,"left":4,"right":7},{"l":0,"f":2,"t":1.80648,"left":5,"right":6},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":12.21498,"left":8,"right":9},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.875,0.125]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.00442,"left":13,"right":20},{"l":0,"f":3,"t":0.67858,"left":14,"right":19},{"l":0,"f":4,"t":58.30393,"left":15,"right":18},{"l":0,"f":1,"t":0.85689,"left":16,"right":17},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.26316,0.73684]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":63.14417,"left":1,"right":16},{"l":0,"f":4,"t":40.02281,"left":2,"right":15},{"l":0,"f":4,"t":30.06707,"left":3,"right":10},{"l":0,"f":0,"t":0.11283,"left":4,"right":7},{"l":0,"f":4,"t":9.57724,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.9,0.1]},{"l":0,"f":4,"t":18.97689,"left":8,"right":9},{"l":1,"p":[0.36842,0.63158]},{"l":1,"p":[0.14286,0.85714]},{"l":0,"f":1,"t":0.70957,"left":11,"right":12},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":35.71966,"left":13,"right":14},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.79793,"left":1,"right":24},{"l":0,"f":0,"t":0.04349,"left":2,"right":9},{"l":0,"f":2,"t":0.2483,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":32.74769,"left":5,"right":8},{"l":0,"f":1,"t":0.40165,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.14639,"left":10,"right":17},{"l":0,"f":2,"t":0.99942,"left":11,"right":14},{"l":0,"f":3,"t":0.74507,"left":12,"right":13},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.61708,"left":15,"right":16},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.79861,"left":18,"right":21},{"l":0,"f":4,"t":29.39597,"left":19,"right":20},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.19273,"left":22,"right":23},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.00695,"left":25,"right":26},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":64.34074,"left":1,"right":26},{"l":0,"f":4,"t":17.72517,"left":2,"right":13},{"l":0,"f":2,"t":1.39133,"left":3,"right":8},{"l":0,"f":0,"t":0.85388,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.14061,"left":6,"right":7},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":3,"t":0.16121,"left":9,"right":12},{"l":0,"f":4,"t":12.91969,"left":10,"right":11},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.75222,"left":14,"right":21},{"l":0,"f":4,"t":20.66898,"left":15,"right":18},{"l":0,"f":4,"t":18.56934,"left":16,"right":17},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.75,0.25]},{"l":0,"f":1,"t":0.02374,"left":19,"right":20},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":18.53781,"left":22,"right":23},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.60325,"left":24,"right":25},{"l":1,"p":[0.1875,0.8125]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":24.48318,"left":1,"right":22},{"l":0,"f":3,"t":0.90093,"left":2,"right":13},{"l":0,"f":0,"t":0.29961,"left":3,"right":8},{"l":0,"f":2,"t":0.1141,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.71497,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":0,"f":2,"t":1.90868,"left":9,"right":12},{"l":0,"f":4,"t":20.96444,"left":10,"right":11},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.66767,"left":14,"right":15},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.27877,"left":16,"right":19},{"l":0,"f":0,"t":0.24798,"left":17,"right":18},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":17.72472,"left":20,"right":21},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":4,"t":68.17075,"left":23,"right":34},{"l":0,"f":3,"t":0.31622,"left":24,"right":31},{"l":0,"f":1,"t":0.9413,"left":25,"right":28},{"l":0,"f":2,"t":0.68311,"left":26,"right":27},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":4,"t":42.73747,"left":29,"right":30},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":28.24089,"left":32,"right":33},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":34.70284,"left":1,"right":22},{"l":0,"f":3,"t":0.33537,"left":2,"right":15},{"l":0,"f":0,"t":0.66406,"left":3,"right":8},{"l":0,"f":2,"t":0.95096,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.98752,"left":6,"right":7},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[0.83333,0.16667]},{"l":0,"f":1,"t":0.79583,"left":9,"right":12},{"l":0,"f":4,"t":20.90361,"left":10,"right":11},{"l":1,"p":[0.42857,0.57143]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":2,"t":0.9591,"left":13,"right":14},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.28571,0.71429]},{"l":0,"f":2,"t":1.41225,"left":16,"right":21},{"l":0,"f":1,"t":0.60149,"left":17,"right":18},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":28.71335,"left":19,"right":20},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.42096,"left":23,"right":24},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":34.6008,"left":1,"right":22},{"l":0,"f":2,"t":1.43467,"left":2,"right":15},{"l":0,"f":0,"t":0.90983,"left":3,"right":10},{"l":0,"f":1,"t":0.13805,"left":4,"right":7},{"l":0,"f":2,"t":0.86741,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":0,"f":3,"t":0.50786,"left":8,"right":9},{"l":1,"p":[0.88889,0.11111]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.13791,"left":11,"right":14},{"l":0,"f":4,"t":21.48183,"left":12,"right":13},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.16667,0.83333]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":25.5923,"left":16,"right":21},{"l":0,"f":1,"t":0.74811,"left":17,"right":20},{"l":0,"f":0,"t":0.37419,"left":18,"right":19},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.74682,"left":23,"right":24},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":52.83382,"left":1,"right":20},{"l":0,"f":0,"t":0.18404,"left":2,"right":13},{"l":0,"f":1,"t":0.54343,"left":3,"right":8},{"l":0,"f":2,"t":1.44975,"left":4,"right":7},{"l":0,"f":4,"t":17.87841,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.8,0.2]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.08576,"left":9,"right":10},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.70334,"left":11,"right":12},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.44356,"left":14,"right":19},{"l":0,"f":4,"t":44.63633,"left":15,"right":18},{"l":0,"f":1,"t":0.39372,"left":16,"right":17},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.27778,0.72222]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.97543,"left":1,"right":18},{"l":0,"f":0,"t":0.06501,"left":2,"right":9},{"l":0,"f":2,"t":1.66701,"left":3,"right":8},{"l":0,"f":2,"t":0.65202,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":31.8363,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.5152,"left":10,"right":17},{"l":0,"f":1,"t":0.11521,"left":11,"right":14},{"l":0,"f":4,"t":30.67881,"left":12,"right":13},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.49339,"left":15,"right":16},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.4761,"left":19,"right":20},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.87875,"left":1,"right":14},{"l":0,"f":3,"t":0.97186,"left":2,"right":13},{"l":0,"f":1,"t":0.91264,"left":3,"right":8},{"l":0,"f":4,"t":14.96449,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.60227,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.8,0.2]},{"l":0,"f":2,"t":0.33765,"left":9,"right":10},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":36.89648,"left":11,"right":12},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.87927,"left":15,"right":24},{"l":0,"f":2,"t":1.2865,"left":16,"right":23},{"l":0,"f":2,"t":0.55885,"left":17,"right":20},{"l":0,"f":1,"t":0.12833,"left":18,"right":19},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":4,"t":28.65659,"left":21,"right":22},{"l":1,"p":[0.30769,0.69231]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.4989,"left":1,"right":16},{"l":0,"f":0,"t":0.62191,"left":2,"right":9},{"l":0,"f":3,"t":0.74161,"left":3,"right":8},{"l":0,"f":2,"t":0.99245,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":30.53779,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.59441,"left":10,"right":15},{"l":0,"f":4,"t":23.51157,"left":11,"right":14},{"l":0,"f":4,"t":18.19863,"left":12,"right":13},{"l":1,"p":[0.42857,0.57143]},{"l":1,"p":[0.3,0.7]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":19.33045,"left":17,"right":22},{"l":0,"f":1,"t":0.7698,"left":18,"right":21},{"l":0,"f":0,"t":0.39201,"left":19,"right":20},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.11964,"left":1,"right":12},{"l":0,"f":3,"t":0.64655,"left":2,"right":11},{"l":0,"f":2,"t":0.43127,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.01609,"left":5,"right":8},{"l":0,"f":2,"t":1.24969,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":28.12262,"left":9,"right":10},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.25016,"left":13,"right":24},{"l":0,"f":2,"t":0.20259,"left":14,"right":19},{"l":0,"f":4,"t":34.4263,"left":15,"right":18},{"l":0,"f":3,"t":0.92267,"left":16,"right":17},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":24.05423,"left":20,"right":23},{"l":0,"f":3,"t":0.08391,"left":21,"right":22},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.77527,"left":25,"right":30},{"l":0,"f":3,"t":0.5562,"left":26,"right":29},{"l":0,"f":4,"t":58.34454,"left":27,"right":28},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.14531,"left":31,"right":34},{"l":0,"f":4,"t":39.49048,"left":32,"right":33},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":60.20008,"left":1,"right":16},{"l":0,"f":0,"t":0.80672,"left":2,"right":9},{"l":0,"f":3,"t":0.2068,"left":3,"right":8},{"l":0,"f":4,"t":26.95658,"left":4,"right":7},{"l":0,"f":2,"t":0.33428,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.84615,0.15385]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":24.74164,"left":10,"right":15},{"l":0,"f":3,"t":0.11148,"left":11,"right":14},{"l":0,"f":2,"t":1.3961,"left":12,"right":13},{"l":1,"p":[0.36,0.64]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":39.05796,"left":1,"right":20},{"l":0,"f":0,"t":0.0037,"left":2,"right":9},{"l":0,"f":2,"t":1.66198,"left":3,"right":8},{"l":0,"f":2,"t":0.47369,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.30476,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":10.87924,"left":10,"right":15},{"l":0,"f":4,"t":9.86502,"left":11,"right":12},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.7287,"left":13,"right":14},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.14344,"left":16,"right":19},{"l":0,"f":1,"t":0.51476,"left":17,"right":18},{"l":1,"p":[0.3,0.7]},{"l":1,"p":[0.27778,0.72222]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":72.61506,"left":21,"right":24},{"l":0,"f":0,"t":0.81579,"left":22,"right":23},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.94377,"left":1,"right":24},{"l":0,"f":4,"t":37.63201,"left":2,"right":17},{"l":0,"f":1,"t":0.64624,"left":3,"right":10},{"l":0,"f":4,"t":25.33041,"left":4,"right":7},{"l":0,"f":0,"t":0.88387,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.44444,0.55556]},{"l":0,"f":4,"t":32.83784,"left":8,"right":9},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.06127,"left":11,"right":14},{"l":0,"f":2,"t":0.74318,"left":12,"right":13},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":0,"f":4,"t":17.93658,"left":15,"right":16},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.22222,0.77778]},{"l":0,"f":4,"t":79.2905,"left":18,"right":23},{"l":0,"f":2,"t":0.7237,"left":19,"right":20},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.12449,"left":21,"right":22},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.69214,"left":25,"right":26},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.42098,"left":1,"right":16},{"l":0,"f":1,"t":0.58099,"left":2,"right":9},{"l":0,"f":2,"t":0.4927,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.73557,"left":5,"right":8},{"l":0,"f":4,"t":20.27788,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.59165,"left":10,"right":15},{"l":0,"f":4,"t":16.55397,"left":11,"right":12},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":24.70965,"left":13,"right":14},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.03284,"left":17,"right":24},{"l":0,"f":2,"t":1.91306,"left":18,"right":23},{"l":0,"f":3,"t":0.29033,"left":19,"right":22},{"l":0,"f":4,"t":12.48883,"left":20,"right":21},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[0.16667,0.83333]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.90642,"left":25,"right":32},{"l":0,"f":2,"t":0.5145,"left":26,"right":29},{"l":0,"f":4,"t":38.30848,"left":27,"right":28},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":17.16818,"left":30,"right":31},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.08744,"left":1,"right":10},{"l":0,"f":3,"t":0.2469,"left":2,"right":9},{"l":0,"f":2,"t":0.1152,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":14.1446,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.76262,"left":7,"right":8},{"l":1,"p":[0.8,0.2]},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.70035,"left":11,"right":18},{"l":0,"f":4,"t":80.93141,"left":12,"right":17},{"l":0,"f":2,"t":1.3033,"left":13,"right":16},{"l":0,"f":2,"t":0.30498,"left":14,"right":15},{"l":1,"p":[0.3125,0.6875]},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.84435,"left":1,"right":22},{"l":0,"f":2,"t":0.63671,"left":2,"right":13},{"l":0,"f":1,"t":0.04054,"left":3,"right":8},{"l":0,"f":0,"t":0.97728,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":34.22265,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.84698,"left":9,"right":10},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.03485,"left":11,"right":12},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":72.57873,"left":14,"right":21},{"l":0,"f":2,"t":1.69264,"left":15,"right":18},{"l":0,"f":0,"t":0.31789,"left":16,"right":17},{"l":1,"p":[0.84615,0.15385]},{"l":1,"p":[0.28571,0.71429]},{"l":0,"f":4,"t":16.95111,"left":19,"right":20},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.23317,"left":23,"right":24},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":67.5351,"left":1,"right":18},{"l":0,"f":4,"t":36.76233,"left":2,"right":15},{"l":0,"f":0,"t":0.50894,"left":3,"right":10},{"l":0,"f":1,"t":0.27205,"left":4,"right":7},{"l":0,"f":4,"t":14.08957,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":0,"f":4,"t":19.90931,"left":8,"right":9},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.28176,"left":11,"right":14},{"l":0,"f":4,"t":12.8827,"left":12,"right":13},{"l":1,"p":[0.57143,0.42857]},{"l":1,"p":[0.2381,0.7619]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.26079,"left":16,"right":17},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.21119,"left":1,"right":16},{"l":0,"f":0,"t":0.92069,"left":2,"right":9},{"l":0,"f":2,"t":1.33369,"left":3,"right":8},{"l":0,"f":4,"t":13.16234,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":15.22809,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":71.34916,"left":10,"right":15},{"l":0,"f":4,"t":48.19103,"left":11,"right":14},{"l":0,"f":2,"t":0.17865,"left":12,"right":13},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.32148,"left":17,"right":18},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.05669,"left":1,"right":14},{"l":0,"f":3,"t":0.09131,"left":2,"right":13},{"l":0,"f":1,"t":0.39621,"left":3,"right":8},{"l":0,"f":4,"t":19.12027,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.23341,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.66667,0.33333]},{"l":0,"f":2,"t":0.64222,"left":9,"right":10},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":13.20506,"left":11,"right":12},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.56674,"left":15,"right":28},{"l":0,"f":1,"t":0.57434,"left":16,"right":23},{"l":0,"f":4,"t":19.87858,"left":17,"right":20},{"l":0,"f":2,"t":0.74738,"left":18,"right":19},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":2,"t":0.92935,"left":21,"right":22},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":3,"t":0.81488,"left":24,"right":27},{"l":0,"f":2,"t":0.92883,"left":25,"right":26},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.92235,"left":1,"right":10},{"l":0,"f":3,"t":0.66592,"left":2,"right":9},{"l":0,"f":4,"t":34.37997,"left":3,"right":8},{"l":0,"f":2,"t":1.47858,"left":4,"right":7},{"l":0,"f":4,"t":22.44171,"left":5,"right":6},{"l":1,"p":[0.91667,0.08333]},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.14877,"left":11,"right":18},{"l":0,"f":3,"t":0.65473,"left":12,"right":17},{"l":0,"f":4,"t":24.58761,"left":13,"right":16},{"l":0,"f":2,"t":0.8103,"left":14,"right":15},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.93021,"left":19,"right":26},{"l":0,"f":2,"t":0.41131,"left":20,"right":23},{"l":0,"f":4,"t":17.53077,"left":21,"right":22},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.125,0.875]},{"l":0,"f":4,"t":43.22546,"left":24,"right":25},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.61312,"left":1,"right":12},{"l":0,"f":3,"t":0.48523,"left":2,"right":11},{"l":0,"f":2,"t":0.92692,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.71039,"left":5,"right":8},{"l":0,"f":2,"t":1.71389,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":28.72487,"left":9,"right":10},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.55416,"left":13,"right":20},{"l":0,"f":3,"t":0.7427,"left":14,"right":19},{"l":0,"f":4,"t":28.29462,"left":15,"right":18},{"l":0,"f":2,"t":1.20382,"left":16,"right":17},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.66784,"left":21,"right":28},{"l":0,"f":2,"t":0.83973,"left":22,"right":25},{"l":0,"f":3,"t":0.88487,"left":23,"right":24},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":60.3152,"left":26,"right":27},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":1,"t":0.35152,"left":1,"right":18},{"l":0,"f":2,"t":1.41472,"left":2,"right":15},{"l":0,"f":4,"t":16.00573,"left":3,"right":8},{"l":0,"f":2,"t":0.59374,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":13.78384,"left":6,"right":7},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.05084,"left":9,"right":12},{"l":0,"f":0,"t":0.4814,"left":10,"right":11},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":22.41975,"left":13,"right":14},{"l":1,"p":[0.8,0.2]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":0,"t":0.96323,"left":16,"right":17},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.01774,"left":19,"right":26},{"l":0,"f":3,"t":0.5498,"left":20,"right":25},{"l":0,"f":4,"t":18.96956,"left":21,"right":22},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.11618,"left":23,"right":24},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.69216,"left":27,"right":34},{"l":0,"f":2,"t":0.92256,"left":28,"right":31},{"l":0,"f":4,"t":26.09775,"left":29,"right":30},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":25.80789,"left":32,"right":33},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.25695,"left":1,"right":10},{"l":0,"f":2,"t":1.2477,"left":2,"right":9},{"l":0,"f":2,"t":0.74892,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":16.79876,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.69818,"left":7,"right":8},{"l":1,"p":[0.77778,0.22222]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.31637,"left":11,"right":18},{"l":0,"f":4,"t":32.57927,"left":12,"right":17},{"l":0,"f":2,"t":1.16183,"left":13,"right":16},{"l":0,"f":4,"t":10.00233,"left":14,"right":15},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.42839,"left":1,"right":10},{"l":0,"f":4,"t":36.94355,"left":2,"right":9},{"l":0,"f":3,"t":0.16002,"left":3,"right":8},{"l":0,"f":2,"t":1.22252,"left":4,"right":7},{"l":0,"f":4,"t":16.50898,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.89934,"left":11,"right":22},{"l":0,"f":1,"t":0.78593,"left":12,"right":17},{"l":0,"f":4,"t":37.39194,"left":13,"right":16},{"l":0,"f":2,"t":0.63367,"left":14,"right":15},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.36295,"left":18,"right":21},{"l":0,"f":2,"t":0.04176,"left":19,"right":20},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.03393,"left":1,"right":14},{"l":0,"f":2,"t":0.37004,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.53154,"left":4,"right":9},{"l":0,"f":2,"t":1.4575,"left":5,"right":8},{"l":0,"f":4,"t":20.37841,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":18.01983,"left":10,"right":11},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.97273,"left":12,"right":13},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":55.19585,"left":15,"right":24},{"l":0,"f":3,"t":0.63337,"left":16,"right":23},{"l":0,"f":2,"t":0.71078,"left":17,"right":20},{"l":0,"f":4,"t":19.96189,"left":18,"right":19},{"l":1,"p":[0.55556,0.44444]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.66808,"left":21,"right":22},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.46744,"left":1,"right":26},{"l":0,"f":0,"t":0.96078,"left":2,"right":13},{"l":0,"f":1,"t":0.24757,"left":3,"right":8},{"l":0,"f":4,"t":16.88063,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":19.95072,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":2,"t":0.2195,"left":9,"right":10},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":23.43479,"left":11,"right":12},{"l":1,"p":[0.8,0.2]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.03741,"left":14,"right":19},{"l":0,"f":4,"t":29.18447,"left":15,"right":18},{"l":0,"f":2,"t":0.79334,"left":16,"right":17},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.59858,"left":20,"right":23},{"l":0,"f":4,"t":62.88485,"left":21,"right":22},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":64.39739,"left":24,"right":25},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.65416,"left":27,"right":32},{"l":0,"f":1,"t":0.00792,"left":28,"right":29},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.7428,"left":30,"right":31},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.6563,"left":1,"right":16},{"l":0,"f":2,"t":1.52712,"left":2,"right":13},{"l":0,"f":0,"t":0.7524,"left":3,"right":8},{"l":0,"f":2,"t":0.74344,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":37.35276,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":43.73005,"left":9,"right":12},{"l":0,"f":4,"t":14.9056,"left":10,"right":11},{"l":1,"p":[0.45455,0.54545]},{"l":1,"p":[0.23529,0.76471]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.17058,"left":14,"right":15},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.34458,"left":17,"right":18},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":29.71143,"left":19,"right":24},{"l":0,"f":4,"t":10.11067,"left":20,"right":21},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.30051,"left":22,"right":23},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.76534,"left":1,"right":20},{"l":0,"f":2,"t":0.76895,"left":2,"right":9},{"l":0,"f":0,"t":0.61945,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.94339,"left":5,"right":8},{"l":0,"f":1,"t":0.24572,"left":6,"right":7},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.17505,"left":10,"right":15},{"l":0,"f":4,"t":29.73217,"left":11,"right":14},{"l":0,"f":1,"t":0.48992,"left":12,"right":13},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":44.93278,"left":16,"right":19},{"l":0,"f":4,"t":23.98303,"left":17,"right":18},{"l":1,"p":[0.30769,0.69231]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.23031,"left":21,"right":22},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.02403,"left":1,"right":14},{"l":0,"f":3,"t":0.27801,"left":2,"right":13},{"l":0,"f":1,"t":0.02098,"left":3,"right":8},{"l":0,"f":4,"t":22.79022,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.77489,"left":6,"right":7},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":21.1314,"left":9,"right":12},{"l":0,"f":4,"t":12.56228,"left":10,"right":11},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":38.10014,"left":15,"right":22},{"l":0,"f":3,"t":0.48398,"left":16,"right":21},{"l":0,"f":2,"t":1.7217,"left":17,"right":20},{"l":0,"f":4,"t":31.30199,"left":18,"right":19},{"l":1,"p":[0.34615,0.65385]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.16388,"left":1,"right":20},{"l":0,"f":0,"t":0.58322,"left":2,"right":13},{"l":0,"f":4,"t":24.8034,"left":3,"right":8},{"l":0,"f":1,"t":0.55495,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":19.86564,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.98167,"left":9,"right":10},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":30.09552,"left":11,"right":12},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.76352,"left":14,"right":19},{"l":0,"f":4,"t":23.55939,"left":15,"right":18},{"l":0,"f":1,"t":0.83445,"left":16,"right":17},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.3125,0.6875]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.30578,"left":21,"right":24},{"l":0,"f":0,"t":0.34709,"left":22,"right":23},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.91486,"left":1,"right":10},{"l":0,"f":3,"t":0.68039,"left":2,"right":9},{"l":0,"f":2,"t":0.24469,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.91014,"left":5,"right":8},{"l":0,"f":1,"t":0.351,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":68.60338,"left":11,"right":18},{"l":0,"f":3,"t":0.48291,"left":12,"right":17},{"l":0,"f":4,"t":26.5203,"left":13,"right":16},{"l":0,"f":1,"t":0.30327,"left":14,"right":15},{"l":1,"p":[0.44444,0.55556]},{"l":1,"p":[0.29412,0.70588]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":50.97423,"left":1,"right":18},{"l":0,"f":0,"t":0.27159,"left":2,"right":9},{"l":0,"f":3,"t":0.43783,"left":3,"right":8},{"l":0,"f":2,"t":0.90896,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":31.71222,"left":6,"right":7},{"l":1,"p":[0.84615,0.15385]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.56688,"left":10,"right":17},{"l":0,"f":1,"t":0.84442,"left":11,"right":14},{"l":0,"f":3,"t":0.5921,"left":12,"right":13},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.45785,"left":15,"right":16},{"l":1,"p":[0.26316,0.73684]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.38096,"left":1,"right":22},{"l":0,"f":0,"t":0.60127,"left":2,"right":9},{"l":0,"f":2,"t":0.36129,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.24944,"left":5,"right":8},{"l":0,"f":4,"t":14.57315,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.81818,0.18182]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.01877,"left":10,"right":17},{"l":0,"f":2,"t":0.67199,"left":11,"right":14},{"l":0,"f":3,"t":0.3706,"left":12,"right":13},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":16.85686,"left":15,"right":16},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":3,"t":0.25946,"left":18,"right":21},{"l":0,"f":2,"t":0.25508,"left":19,"right":20},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.06254,"left":23,"right":28},{"l":0,"f":4,"t":26.95561,"left":24,"right":27},{"l":0,"f":0,"t":0.26315,"left":25,"right":26},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.95593,"left":1,"right":10},{"l":0,"f":4,"t":12.88918,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.28862,"left":4,"right":9},{"l":0,"f":2,"t":0.65438,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.13148,"left":7,"right":8},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.70704,"left":11,"right":20},{"l":0,"f":4,"t":34.27466,"left":12,"right":19},{"l":0,"f":2,"t":0.80905,"left":13,"right":16},{"l":0,"f":4,"t":14.76472,"left":14,"right":15},{"l":1,"p":[0.6,0.4]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":2,"t":1.3569,"left":17,"right":18},{"l":1,"p":[0.30769,0.69231]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.35718,"left":1,"right":14},{"l":0,"f":4,"t":19.01289,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.17753,"left":4,"right":9},{"l":0,"f":2,"t":0.23332,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":20.20802,"left":7,"right":8},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":2,"t":0.07974,"left":10,"right":11},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":38.5861,"left":12,"right":13},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.59025,"left":15,"right":26},{"l":0,"f":2,"t":0.29481,"left":16,"right":21},{"l":0,"f":4,"t":62.6397,"left":17,"right":20},{"l":0,"f":1,"t":0.20477,"left":18,"right":19},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":60.28396,"left":22,"right":25},{"l":0,"f":4,"t":37.43257,"left":23,"right":24},{"l":1,"p":[0.26667,0.73333]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.67674,"left":1,"right":16},{"l":0,"f":4,"t":70.32727,"left":2,"right":15},{"l":0,"f":0,"t":0.47664,"left":3,"right":10},{"l":0,"f":1,"t":0.86121,"left":4,"right":7},{"l":0,"f":4,"t":22.072,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":4,"t":34.58432,"left":8,"right":9},{"l":1,"p":[0.92308,0.07692]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.33451,"left":11,"right":14},{"l":0,"f":1,"t":0.09386,"left":12,"right":13},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":3,"t":0.32303,"left":17,"right":20},{"l":0,"f":0,"t":0.83451,"left":18,"right":19},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.11424,"left":1,"right":12},{"l":0,"f":3,"t":0.15304,"left":2,"right":11},{"l":0,"f":2,"t":0.60091,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":23.95289,"left":5,"right":8},{"l":0,"f":2,"t":1.36971,"left":6,"right":7},{"l":1,"p":[0.9,0.1]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.11795,"left":9,"right":10},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.08166,"left":13,"right":24},{"l":0,"f":1,"t":0.14325,"left":14,"right":19},{"l":0,"f":3,"t":0.99629,"left":15,"right":18},{"l":0,"f":2,"t":0.52221,"left":16,"right":17},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":62.67831,"left":20,"right":23},{"l":0,"f":2,"t":0.89861,"left":21,"right":22},{"l":1,"p":[0.23077,0.76923]},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.82635,"left":1,"right":14},{"l":0,"f":3,"t":0.29731,"left":2,"right":13},{"l":0,"f":1,"t":0.20305,"left":3,"right":8},{"l":0,"f":4,"t":17.91194,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.27492,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":2,"t":0.43158,"left":9,"right":10},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":37.89019,"left":11,"right":12},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.76003,"left":15,"right":22},{"l":0,"f":4,"t":41.47467,"left":16,"right":21},{"l":0,"f":4,"t":22.09588,"left":17,"right":20},{"l":0,"f":4,"t":13.68449,"left":18,"right":19},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.30769,0.69231]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":11.88667,"left":1,"right":10},{"l":0,"f":0,"t":0.76593,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.47742,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":9.69232,"left":6,"right":7},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":10.24737,"left":8,"right":9},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.34088,"left":11,"right":18},{"l":0,"f":4,"t":38.6266,"left":12,"right":17},{"l":0,"f":3,"t":0.26755,"left":13,"right":16},{"l":0,"f":4,"t":24.77655,"left":14,"right":15},{"l":1,"p":[0.93333,0.06667]},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":36.15526,"left":19,"right":24},{"l":0,"f":3,"t":0.85579,"left":20,"right":23},{"l":0,"f":1,"t":0.54755,"left":21,"right":22},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.27778,0.72222]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.59998,"left":1,"right":14},{"l":0,"f":1,"t":0.67487,"left":2,"right":7},{"l":0,"f":4,"t":21.25558,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.7139,"left":5,"right":6},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.15428,"left":8,"right":9},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":38.183,"left":10,"right":13},{"l":0,"f":4,"t":17.27924,"left":11,"right":12},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":37.58402,"left":15,"right":26},{"l":0,"f":4,"t":19.9178,"left":16,"right":21},{"l":0,"f":3,"t":0.27657,"left":17,"right":20},{"l":0,"f":1,"t":0.31179,"left":18,"right":19},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.38462,0.61538]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.89655,"left":22,"right":25},{"l":0,"f":3,"t":0.71475,"left":23,"right":24},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.85588,"left":1,"right":12},{"l":0,"f":2,"t":0.01823,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.56005,"left":4,"right":11},{"l":0,"f":4,"t":22.31972,"left":5,"right":8},{"l":0,"f":2,"t":1.98789,"left":6,"right":7},{"l":1,"p":[0.88889,0.11111]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.13133,"left":9,"right":10},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.46868,"left":13,"right":26},{"l":0,"f":1,"t":0.40607,"left":14,"right":21},{"l":0,"f":4,"t":17.55543,"left":15,"right":18},{"l":0,"f":4,"t":14.60268,"left":16,"right":17},{"l":1,"p":[0.6,0.4]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.29074,"left":19,"right":20},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":38.50615,"left":22,"right":25},{"l":0,"f":4,"t":28.13462,"left":23,"right":24},{"l":1,"p":[0.29412,0.70588]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.20937,"left":1,"right":10},{"l":0,"f":2,"t":1.461,"left":2,"right":9},{"l":0,"f":2,"t":0.72619,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":15.69439,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":34.78431,"left":7,"right":8},{"l":1,"p":[0.77778,0.22222]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.61808,"left":11,"right":24},{"l":0,"f":1,"t":0.58735,"left":12,"right":19},{"l":0,"f":2,"t":0.96644,"left":13,"right":16},{"l":0,"f":4,"t":22.88907,"left":14,"right":15},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":9.95034,"left":17,"right":18},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.16667,0.83333]},{"l":0,"f":4,"t":30.27087,"left":20,"right":23},{"l":0,"f":4,"t":17.30482,"left":21,"right":22},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.13486,"left":1,"right":10},{"l":0,"f":4,"t":37.83458,"left":2,"right":9},{"l":0,"f":2,"t":0.94318,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.27816,"left":5,"right":8},{"l":0,"f":4,"t":12.71848,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.26292,"left":11,"right":24},{"l":0,"f":1,"t":0.2488,"left":12,"right":17},{"l":0,"f":2,"t":1.79677,"left":13,"right":16},{"l":0,"f":2,"t":0.1197,"left":14,"right":15},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.06509,"left":18,"right":21},{"l":0,"f":4,"t":57.53746,"left":19,"right":20},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":38.89313,"left":22,"right":23},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":80.05423,"left":1,"right":18},{"l":0,"f":0,"t":0.45924,"left":2,"right":11},{"l":0,"f":3,"t":0.16713,"left":3,"right":10},{"l":0,"f":1,"t":0.11232,"left":4,"right":7},{"l":0,"f":2,"t":1.92552,"left":5,"right":6},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.22947,"left":8,"right":9},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.56053,"left":12,"right":17},{"l":0,"f":2,"t":1.58722,"left":13,"right":16},{"l":0,"f":1,"t":0.92007,"left":14,"right":15},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.76131,"left":1,"right":12},{"l":0,"f":4,"t":12.75517,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":26.43016,"left":4,"right":11},{"l":0,"f":4,"t":22.80513,"left":5,"right":8},{"l":0,"f":2,"t":1.3044,"left":6,"right":7},{"l":1,"p":[0.91667,0.08333]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.35552,"left":9,"right":10},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.74581,"left":13,"right":24},{"l":0,"f":1,"t":0.67348,"left":14,"right":19},{"l":0,"f":4,"t":34.47511,"left":15,"right":18},{"l":0,"f":4,"t":14.9038,"left":16,"right":17},{"l":1,"p":[0.6,0.4]},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":57.32277,"left":20,"right":23},{"l":0,"f":4,"t":41.94709,"left":21,"right":22},{"l":1,"p":[0.2381,0.7619]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.92577,"left":1,"right":14},{"l":0,"f":4,"t":69.80024,"left":2,"right":13},{"l":0,"f":0,"t":0.18266,"left":3,"right":8},{"l":0,"f":4,"t":32.72109,"left":4,"right":7},{"l":0,"f":2,"t":1.40232,"left":5,"right":6},{"l":1,"p":[0.875,0.125]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":68.6944,"left":9,"right":12},{"l":0,"f":2,"t":1.09287,"left":10,"right":11},{"l":1,"p":[0.31034,0.68966]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.80777,"left":15,"right":16},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.57917,"left":17,"right":24},{"l":0,"f":2,"t":0.86448,"left":18,"right":21},{"l":0,"f":0,"t":0.79779,"left":19,"right":20},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.2402,"left":22,"right":23},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.48082,"left":1,"right":16},{"l":0,"f":1,"t":0.75653,"left":2,"right":9},{"l":0,"f":2,"t":1.06848,"left":3,"right":8},{"l":0,"f":4,"t":24.95298,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.74686,"left":6,"right":7},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.32924,"left":10,"right":15},{"l":0,"f":4,"t":26.13948,"left":11,"right":14},{"l":0,"f":4,"t":13.35134,"left":12,"right":13},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.875,0.125]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.36846,"left":17,"right":30},{"l":0,"f":2,"t":0.10691,"left":18,"right":25},{"l":0,"f":1,"t":0.96186,"left":19,"right":22},{"l":0,"f":4,"t":25.27127,"left":20,"right":21},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":60.01282,"left":23,"right":24},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.45004,"left":26,"right":29},{"l":0,"f":1,"t":0.03189,"left":27,"right":28},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.22577,"left":1,"right":14},{"l":0,"f":4,"t":35.4966,"left":2,"right":13},{"l":0,"f":1,"t":0.85442,"left":3,"right":8},{"l":0,"f":2,"t":0.20854,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.8495,"left":6,"right":7},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.13613,"left":9,"right":12},{"l":0,"f":2,"t":0.7947,"left":10,"right":11},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.82578,"left":15,"right":24},{"l":0,"f":4,"t":51.36481,"left":16,"right":23},{"l":0,"f":4,"t":10.91305,"left":17,"right":20},{"l":0,"f":4,"t":9.74787,"left":18,"right":19},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":15.58685,"left":21,"right":22},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.21053,0.78947]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":68.3466,"left":1,"right":14},{"l":0,"f":4,"t":43.61942,"left":2,"right":13},{"l":0,"f":0,"t":0.08607,"left":3,"right":8},{"l":0,"f":3,"t":0.78032,"left":4,"right":7},{"l":0,"f":1,"t":0.70411,"left":5,"right":6},{"l":1,"p":[0.875,0.125]},{"l":1,"p":[0.9,0.1]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":33.58321,"left":9,"right":12},{"l":0,"f":2,"t":1.4091,"left":10,"right":11},{"l":1,"p":[0.29032,0.70968]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":24.11746,"left":1,"right":18},{"l":0,"f":0,"t":0.4253,"left":2,"right":9},{"l":0,"f":3,"t":0.90738,"left":3,"right":8},{"l":0,"f":1,"t":0.03147,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.6693,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.88395,"left":10,"right":17},{"l":0,"f":4,"t":10.82942,"left":11,"right":14},{"l":0,"f":4,"t":9.56633,"left":12,"right":13},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":11.47748,"left":15,"right":16},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.30435,0.69565]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":27.31968,"left":19,"right":26},{"l":0,"f":1,"t":0.35759,"left":20,"right":25},{"l":0,"f":0,"t":0.39175,"left":21,"right":24},{"l":0,"f":4,"t":25.70132,"left":22,"right":23},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":49.5003,"left":27,"right":32},{"l":0,"f":2,"t":0.97571,"left":28,"right":29},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":30.80034,"left":30,"right":31},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.03115,"left":1,"right":22},{"l":0,"f":0,"t":0.33671,"left":2,"right":11},{"l":0,"f":2,"t":1.52252,"left":3,"right":10},{"l":0,"f":4,"t":22.69115,"left":4,"right":7},{"l":0,"f":4,"t":21.53888,"left":5,"right":6},{"l":1,"p":[0.9,0.1]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.49058,"left":8,"right":9},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.02265,"left":12,"right":17},{"l":0,"f":4,"t":24.06281,"left":13,"right":16},{"l":0,"f":2,"t":1.49704,"left":14,"right":15},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":70.11897,"left":18,"right":21},{"l":0,"f":2,"t":0.4123,"left":19,"right":20},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.9553,"left":23,"right":24},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.14779,"left":1,"right":24},{"l":0,"f":4,"t":20.40985,"left":2,"right":15},{"l":0,"f":1,"t":0.26709,"left":3,"right":8},{"l":0,"f":0,"t":0.32829,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":13.54645,"left":6,"right":7},{"l":1,"p":[0.6,0.4]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.87202,"left":9,"right":12},{"l":0,"f":2,"t":0.01169,"left":10,"right":11},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.75,0.25]},{"l":0,"f":4,"t":16.50948,"left":13,"right":14},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.42857,0.57143]},{"l":0,"f":4,"t":79.10873,"left":16,"right":23},{"l":0,"f":2,"t":0.77236,"left":17,"right":20},{"l":0,"f":4,"t":27.48324,"left":18,"right":19},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":38.47491,"left":21,"right":22},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.07448,"left":25,"right":26},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.63368,"left":1,"right":14},{"l":0,"f":3,"t":0.47873,"left":2,"right":13},{"l":0,"f":4,"t":24.9977,"left":3,"right":8},{"l":0,"f":4,"t":13.6399,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.49089,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.875,0.125]},{"l":0,"f":1,"t":0.66048,"left":9,"right":12},{"l":0,"f":4,"t":25.74791,"left":10,"right":11},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.50455,"left":15,"right":24},{"l":0,"f":3,"t":0.02077,"left":16,"right":23},{"l":0,"f":4,"t":10.46221,"left":17,"right":20},{"l":0,"f":4,"t":9.66244,"left":18,"right":19},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.86848,"left":21,"right":22},{"l":1,"p":[0.3125,0.6875]},{"l":1,"p":[0.23077,0.76923]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.07514,"left":1,"right":12},{"l":0,"f":2,"t":0.86505,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.09191,"left":4,"right":11},{"l":0,"f":4,"t":21.10546,"left":5,"right":8},{"l":0,"f":4,"t":18.28439,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":3,"t":0.16614,"left":9,"right":10},{"l":1,"p":[0.8,0.2]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.90837,"left":13,"right":22},{"l":0,"f":4,"t":63.78476,"left":14,"right":21},{"l":0,"f":4,"t":20.93766,"left":15,"right":18},{"l":0,"f":1,"t":0.96526,"left":16,"right":17},{"l":1,"p":[0.42857,0.57143]},{"l":1,"p":[0.35714,0.64286]},{"l":0,"f":4,"t":26.0666,"left":19,"right":20},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.73654,"left":1,"right":22},{"l":0,"f":0,"t":0.22825,"left":2,"right":9},{"l":0,"f":4,"t":13.96859,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":37.09039,"left":5,"right":8},{"l":0,"f":3,"t":0.72492,"left":6,"right":7},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":18.35864,"left":10,"right":17},{"l":0,"f":2,"t":0.37818,"left":11,"right":14},{"l":0,"f":1,"t":0.29959,"left":12,"right":13},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":1,"t":0.70996,"left":15,"right":16},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":3,"t":0.56059,"left":18,"right":21},{"l":0,"f":4,"t":67.77001,"left":19,"right":20},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.27691,"left":23,"right":24},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.55989,"left":1,"right":16},{"l":0,"f":4,"t":60.02321,"left":2,"right":15},{"l":0,"f":0,"t":0.56791,"left":3,"right":10},{"l":0,"f":1,"t":0.36625,"left":4,"right":7},{"l":0,"f":4,"t":25.0994,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":2,"t":0.08171,"left":8,"right":9},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.875,0.125]},{"l":0,"f":3,"t":0.77377,"left":11,"right":14},{"l":0,"f":2,"t":0.63584,"left":12,"right":13},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.80304,"left":17,"right":18},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.03938,"left":1,"right":20},{"l":0,"f":2,"t":0.43652,"left":2,"right":9},{"l":0,"f":0,"t":0.55256,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.44392,"left":5,"right":8},{"l":0,"f":1,"t":0.32973,"left":6,"right":7},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.12634,"left":10,"right":15},{"l":0,"f":4,"t":17.83843,"left":11,"right":12},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.37797,"left":13,"right":14},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":9.43367,"left":16,"right":17},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.47278,"left":18,"right":19},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.2,0.8]},{"l":0,"f":0,"t":0.60254,"left":21,"right":22},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.98659,"left":1,"right":26},{"l":0,"f":2,"t":0.66905,"left":2,"right":13},{"l":0,"f":3,"t":0.15542,"left":3,"right":10},{"l":0,"f":4,"t":21.11964,"left":4,"right":7},{"l":0,"f":1,"t":0.95273,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.44444,0.55556]},{"l":0,"f":1,"t":0.17407,"left":8,"right":9},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":0,"t":0.81672,"left":11,"right":12},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":1,"t":0.26879,"left":14,"right":21},{"l":0,"f":0,"t":0.97709,"left":15,"right":18},{"l":0,"f":4,"t":13.76377,"left":16,"right":17},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.8,0.2]},{"l":0,"f":4,"t":18.50623,"left":19,"right":20},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":4,"t":53.53746,"left":22,"right":25},{"l":0,"f":0,"t":0.8284,"left":23,"right":24},{"l":1,"p":[0.875,0.125]},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":19.15608,"left":27,"right":32},{"l":0,"f":3,"t":0.86098,"left":28,"right":31},{"l":0,"f":4,"t":12.9361,"left":29,"right":30},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.81554,"left":1,"right":26},{"l":0,"f":1,"t":0.46429,"left":2,"right":15},{"l":0,"f":0,"t":0.49265,"left":3,"right":8},{"l":0,"f":2,"t":0.74381,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":23.75035,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":4,"t":17.78967,"left":9,"right":12},{"l":0,"f":4,"t":15.30055,"left":10,"right":11},{"l":1,"p":[0.6,0.4]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.86168,"left":13,"right":14},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.08027,"left":16,"right":21},{"l":0,"f":4,"t":28.37076,"left":17,"right":20},{"l":0,"f":4,"t":20.35243,"left":18,"right":19},{"l":1,"p":[0.8,0.2]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":40.35171,"left":22,"right":25},{"l":0,"f":2,"t":0.23281,"left":23,"right":24},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.24563,"left":27,"right":32},{"l":0,"f":4,"t":10.74219,"left":28,"right":29},{"l":1,"p":[1.0,0.0]},{"l":0,"f":0,"t":0.75896,"left":30,"right":31},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.61256,"left":33,"right":34},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":19.81638,"left":1,"right":22},{"l":0,"f":3,"t":0.39462,"left":2,"right":15},{"l":0,"f":0,"t":0.8591,"left":3,"right":8},{"l":0,"f":4,"t":17.93316,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.41746,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.66667,0.33333]},{"l":0,"f":1,"t":0.65099,"left":9,"right":12},{"l":0,"f":2,"t":1.71093,"left":10,"right":11},{"l":1,"p":[0.6,0.4]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":13.44823,"left":13,"right":14},{"l":1,"p":[0.4,0.6]},{"l":1,"p":[0.375,0.625]},{"l":0,"f":2,"t":1.58323,"left":16,"right":21},{"l":0,"f":2,"t":0.33707,"left":17,"right":20},{"l":0,"f":0,"t":0.27629,"left":18,"right":19},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.13399,"left":23,"right":28},{"l":0,"f":1,"t":0.29085,"left":24,"right":27},{"l":0,"f":4,"t":25.70239,"left":25,"right":26},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.51128,"left":29,"right":34},{"l":0,"f":4,"t":32.11407,"left":30,"right":33},{"l":0,"f":4,"t":22.48456,"left":31,"right":32},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.22118,"left":1,"right":14},{"l":0,"f":4,"t":34.56302,"left":2,"right":13},{"l":0,"f":1,"t":0.63168,"left":3,"right":8},{"l":0,"f":4,"t":15.74755,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.7643,"left":6,"right":7},{"l":1,"p":[0.8,0.2]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.17311,"left":9,"right":10},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":19.96002,"left":11,"right":12},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.10582,"left":15,"right":24},{"l":0,"f":4,"t":22.21461,"left":16,"right":23},{"l":0,"f":4,"t":20.22238,"left":17,"right":20},{"l":0,"f":2,"t":0.51277,"left":18,"right":19},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.27273,0.72727]},{"l":0,"f":2,"t":0.35605,"left":21,"right":22},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.90422,"left":1,"right":14},{"l":0,"f":1,"t":0.28537,"left":2,"right":7},{"l":0,"f":4,"t":24.8471,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":25.72278,"left":5,"right":6},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.35169,"left":8,"right":13},{"l":0,"f":4,"t":38.54468,"left":9,"right":12},{"l":0,"f":2,"t":0.36497,"left":10,"right":11},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.75681,"left":15,"right":26},{"l":0,"f":2,"t":0.19216,"left":16,"right":21},{"l":0,"f":4,"t":21.80702,"left":17,"right":20},{"l":0,"f":1,"t":0.03897,"left":18,"right":19},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":1.55309,"left":22,"right":25},{"l":0,"f":1,"t":0.08256,"left":23,"right":24},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.81831,"left":1,"right":14},{"l":0,"f":4,"t":21.43423,"left":2,"right":9},{"l":0,"f":2,"t":0.1539,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.85628,"left":5,"right":8},{"l":0,"f":1,"t":0.41112,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.14106,"left":10,"right":13},{"l":0,"f":4,"t":25.79191,"left":11,"right":12},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.46595,"left":15,"right":24},{"l":0,"f":4,"t":66.11259,"left":16,"right":23},{"l":0,"f":1,"t":0.22649,"left":17,"right":20},{"l":0,"f":4,"t":17.33563,"left":18,"right":19},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.16667,0.83333]},{"l":0,"f":2,"t":0.64233,"left":21,"right":22},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.51708,"left":1,"right":14},{"l":0,"f":3,"t":0.53106,"left":2,"right":13},{"l":0,"f":1,"t":0.57837,"left":3,"right":8},{"l":0,"f":4,"t":18.19683,"left":4,"right":5},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":20.05067,"left":6,"right":7},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":4,"t":21.31891,"left":9,"right":12},{"l":0,"f":2,"t":0.04461,"left":10,"right":11},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.45733,"left":15,"right":30},{"l":0,"f":1,"t":0.22029,"left":16,"right":23},{"l":0,"f":4,"t":19.9924,"left":17,"right":20},{"l":0,"f":2,"t":0.9055,"left":18,"right":19},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":4,"t":36.28304,"left":21,"right":22},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":2,"t":0.97953,"left":24,"right":27},{"l":0,"f":4,"t":46.15741,"left":25,"right":26},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":46.67976,"left":28,"right":29},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.0,1.0]}]],"rf_trees":[[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":25.6,"left":2,"right":3},{"l":1,"p":[0.95833,0.04167]},{"l":1,"p":[0.75,0.25]},{"l":0,"f":4,"t":12.15,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.125,0.875]}],[{"l":0,"f":3,"t":0.5,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.86364,0.13636]},{"l":1,"p":[0.19355,0.80645]},{"l":0,"f":2,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.83333,0.16667]},{"l":1,"p":[0.5,0.5]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":19.25,"left":2,"right":3},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.375,0.625]},{"l":1,"p":[0.18182,0.81818]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":18.85,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.78571,0.21429]},{"l":0,"f":4,"t":22.1,"left":5,"right":6},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.5,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.88235,0.11765]},{"l":1,"p":[0.25714,0.74286]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":19.25,"left":2,"right":3},{"l":1,"p":[0.90909,0.09091]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":10.1,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.12121,0.87879]}],[{"l":0,"f":2,"t":1.5,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.82609,0.17391]},{"l":1,"p":[0.26471,0.73529]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.92308,0.07692]},{"l":0,"f":4,"t":19.9,"left":5,"right":6},{"l":1,"p":[0.52381,0.47619]},{"l":1,"p":[0.05556,0.94444]}],[{"l":0,"f":3,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":18.85,"left":2,"right":3},{"l":1,"p":[0.86957,0.13043]},{"l":1,"p":[0.34615,0.65385]},{"l":0,"f":1,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.55556,0.44444]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.77778,0.22222]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.26667,0.73333]},{"l":1,"p":[0.05,0.95]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":25.6,"left":2,"right":3},{"l":1,"p":[0.96154,0.03846]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":4,"t":22.1,"left":5,"right":6},{"l":1,"p":[0.27273,0.72727]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":3,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.94737,0.05263]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":12.35,"left":5,"right":6},{"l":1,"p":[0.71429,0.28571]},{"l":1,"p":[0.09091,0.90909]}],[{"l":0,"f":4,"t":22.5,"left":1,"right":4},{"l":0,"f":4,"t":9.45,"left":2,"right":3},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.61538,0.38462]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":3,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.94444,0.05556]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.11538,0.88462]}],[{"l":0,"f":4,"t":26.45,"left":1,"right":4},{"l":0,"f":4,"t":9.45,"left":2,"right":3},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.54902,0.45098]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":27.15,"left":1,"right":4},{"l":0,"f":3,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.52381,0.47619]},{"l":1,"p":[0.71429,0.28571]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":1,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":19.9,"left":2,"right":3},{"l":1,"p":[0.82353,0.17647]},{"l":1,"p":[0.08333,0.91667]},{"l":0,"f":3,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.30435,0.69565]},{"l":1,"p":[0.44444,0.55556]}],[{"l":0,"f":4,"t":25.6,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.94737,0.05263]},{"l":1,"p":[0.3,0.7]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":22.65,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.86364,0.13636]},{"l":1,"p":[0.26316,0.73684]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":26.45,"left":1,"right":4},{"l":0,"f":3,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.60417,0.39583]},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":13.05,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":2,"t":1.5,"left":5,"right":6},{"l":1,"p":[0.45652,0.54348]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":25.55,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.66667,0.33333]},{"l":0,"f":3,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.16667,0.83333]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.5,"left":1,"right":4},{"l":0,"f":4,"t":22.5,"left":2,"right":3},{"l":1,"p":[0.65854,0.34146]},{"l":1,"p":[0.23529,0.76471]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.5,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.80952,0.19048]},{"l":1,"p":[0.2,0.8]},{"l":0,"f":4,"t":20.9,"left":5,"right":6},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.8,0.2]}],[{"l":0,"f":4,"t":18.85,"left":1,"right":4},{"l":0,"f":3,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":25.55,"left":5,"right":6},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.08333,0.91667]}],[{"l":0,"f":4,"t":25.6,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.19231,0.80769]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":22.65,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.76923,0.23077]},{"l":1,"p":[0.65385,0.34615]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":1,"t":0.5,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.92857,0.07143]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":4,"t":11.95,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.36364,0.63636]}],[{"l":0,"f":4,"t":12.35,"left":1,"right":4},{"l":0,"f":4,"t":9.45,"left":2,"right":3},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.29167,0.70833]},{"l":1,"p":[0.33333,0.66667]}],[{"l":0,"f":3,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":1.5,"left":2,"right":3},{"l":1,"p":[0.55814,0.44186]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":9.9,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.25,0.75]}],[{"l":0,"f":2,"t":1.5,"left":1,"right":4},{"l":0,"f":4,"t":19.9,"left":2,"right":3},{"l":1,"p":[0.51515,0.48485]},{"l":1,"p":[0.26923,0.73077]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":1,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":1.5,"left":2,"right":3},{"l":1,"p":[0.53333,0.46667]},{"l":1,"p":[0.33333,0.66667]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.875,0.125]},{"l":1,"p":[0.15625,0.84375]}],[{"l":0,"f":4,"t":13.0,"left":1,"right":4},{"l":0,"f":4,"t":9.45,"left":2,"right":3},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.83333,0.16667]},{"l":0,"f":2,"t":1.5,"left":5,"right":6},{"l":1,"p":[0.4186,0.5814]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":3,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":22.1,"left":5,"right":6},{"l":1,"p":[0.45,0.55]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":13.15,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.66667,0.33333]},{"l":0,"f":3,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.41026,0.58974]},{"l":1,"p":[0.14286,0.85714]}],[{"l":0,"f":4,"t":22.15,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.94118,0.05882]},{"l":1,"p":[0.38462,0.61538]},{"l":0,"f":1,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.2,0.8]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":2},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.5,"left":3,"right":4},{"l":1,"p":[0.30769,0.69231]},{"l":1,"p":[0.13043,0.86957]}],[{"l":0,"f":4,"t":22.65,"left":1,"right":4},{"l":0,"f":4,"t":21.55,"left":2,"right":3},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.92308,0.07692]},{"l":0,"f":4,"t":22.1,"left":5,"right":6},{"l":1,"p":[0.30769,0.69231]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.70588,0.29412]},{"l":0,"f":2,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.36364,0.63636]},{"l":1,"p":[0.13333,0.86667]}],[{"l":0,"f":4,"t":22.65,"left":1,"right":4},{"l":0,"f":4,"t":9.45,"left":2,"right":3},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.65714,0.34286]},{"l":0,"f":1,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.28571,0.71429]}],[{"l":0,"f":4,"t":23.85,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.8,0.2]},{"l":1,"p":[0.53125,0.46875]},{"l":0,"f":4,"t":26.45,"left":5,"right":6},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.08333,0.91667]}],[{"l":0,"f":2,"t":1.5,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.9,0.1]},{"l":1,"p":[0.22222,0.77778]},{"l":0,"f":3,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":18.85,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.75,0.25]},{"l":0,"f":4,"t":19.9,"left":5,"right":6},{"l":1,"p":[0.3913,0.6087]},{"l":1,"p":[0.05882,0.94118]}],[{"l":0,"f":4,"t":23.55,"left":1,"right":4},{"l":0,"f":2,"t":1.5,"left":2,"right":3},{"l":1,"p":[0.7,0.3]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.71429,0.28571]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":13.05,"left":1,"right":4},{"l":0,"f":4,"t":9.45,"left":2,"right":3},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.91667,0.08333]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.06452,0.93548]}],[{"l":0,"f":4,"t":27.15,"left":1,"right":4},{"l":0,"f":4,"t":13.5,"left":2,"right":3},{"l":1,"p":[0.42857,0.57143]},{"l":1,"p":[0.775,0.225]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":26.3,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.95652,0.04348]},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":25.6,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.5,0.5]},{"l":0,"f":2,"t":1.5,"left":5,"right":6},{"l":1,"p":[0.22222,0.77778]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":18.85,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.8,0.2]},{"l":0,"f":4,"t":19.9,"left":5,"right":6},{"l":1,"p":[0.43478,0.56522]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.8,0.2]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.17647,0.82353]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.9,0.1]},{"l":0,"f":3,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.31429,0.68571]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":1,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":1.5,"left":2,"right":3},{"l":1,"p":[0.52174,0.47826]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.94737,0.05263]},{"l":1,"p":[0.22222,0.77778]}],[{"l":0,"f":4,"t":23.55,"left":1,"right":4},{"l":0,"f":4,"t":11.95,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.45238,0.54762]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":3,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.94444,0.05556]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.2,0.8]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.91667,0.08333]},{"l":0,"f":1,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.14286,0.85714]},{"l":1,"p":[0.13333,0.86667]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":2},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.5,"left":3,"right":4},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":25.6,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.66667,0.33333]},{"l":0,"f":4,"t":18.9,"left":5,"right":6},{"l":1,"p":[0.28571,0.71429]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.5,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.37838,0.62162]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.84211,0.15789]},{"l":0,"f":2,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.44444,0.55556]},{"l":1,"p":[0.17647,0.82353]}],[{"l":0,"f":1,"t":0.5,"left":1,"right":4},{"l":0,"f":3,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.7619,0.2381]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.06667,0.93333]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.85714,0.14286]},{"l":0,"f":4,"t":13.05,"left":5,"right":6},{"l":1,"p":[0.7,0.3]},{"l":1,"p":[0.21875,0.78125]}],[{"l":0,"f":1,"t":0.5,"left":1,"right":4},{"l":0,"f":3,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.64706,0.35294]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.78571,0.21429]},{"l":1,"p":[0.18519,0.81481]}],[{"l":0,"f":4,"t":25.6,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.36364,0.63636]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":9.45,"left":1,"right":2},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.5,"left":3,"right":4},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.17949,0.82051]}],[{"l":0,"f":3,"t":0.5,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.85,0.15]},{"l":1,"p":[0.41935,0.58065]},{"l":0,"f":2,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.2,0.8]},{"l":1,"p":[0.2,0.8]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":18.85,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.90909,0.09091]},{"l":0,"f":2,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.41667,0.58333]},{"l":1,"p":[0.1875,0.8125]}],[{"l":0,"f":3,"t":0.5,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.52632,0.47368]},{"l":1,"p":[0.58065,0.41935]},{"l":0,"f":4,"t":9.9,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.25,0.75]}],[{"l":0,"f":2,"t":1.5,"left":1,"right":4},{"l":0,"f":4,"t":27.0,"left":2,"right":3},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":2},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":22.15,"left":3,"right":4},{"l":1,"p":[0.38462,0.61538]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.9,0.1]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":12.55,"left":5,"right":6},{"l":1,"p":[0.6,0.4]},{"l":1,"p":[0.1875,0.8125]}],[{"l":0,"f":1,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":13.1,"left":2,"right":3},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[0.08333,0.91667]},{"l":0,"f":2,"t":1.5,"left":5,"right":6},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.68421,0.31579]},{"l":0,"f":4,"t":12.35,"left":5,"right":6},{"l":1,"p":[0.57143,0.42857]},{"l":1,"p":[0.07143,0.92857]}],[{"l":0,"f":4,"t":26.45,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.92,0.08]},{"l":1,"p":[0.25,0.75]},{"l":0,"f":2,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.25,0.75]}],[{"l":0,"f":4,"t":10.1,"left":1,"right":4},{"l":0,"f":4,"t":9.45,"left":2,"right":3},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.18182,0.81818]},{"l":1,"p":[0.41463,0.58537]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.85714,0.14286]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.18182,0.81818]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":18.85,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.91667,0.08333]},{"l":0,"f":4,"t":22.15,"left":5,"right":6},{"l":1,"p":[0.42857,0.57143]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.95,0.05]},{"l":0,"f":3,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.23333,0.76667]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":2,"t":1.5,"left":5,"right":6},{"l":1,"p":[0.15789,0.84211]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":26.45,"left":2,"right":3},{"l":1,"p":[0.61905,0.38095]},{"l":1,"p":[0.22222,0.77778]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":25.6,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.71429,0.28571]},{"l":0,"f":2,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.07143,0.92857]},{"l":1,"p":[0.17857,0.82143]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":2},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.5,"left":3,"right":4},{"l":1,"p":[0.5,0.5]},{"l":1,"p":[0.2,0.8]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":2,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.63636,0.36364]},{"l":0,"f":3,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.26471,0.73529]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":25.6,"left":2,"right":3},{"l":1,"p":[0.96429,0.03571]},{"l":1,"p":[0.66667,0.33333]},{"l":0,"f":2,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.36364,0.63636]},{"l":1,"p":[0.15789,0.84211]}],[{"l":0,"f":4,"t":26.45,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.86957,0.13043]},{"l":1,"p":[0.35714,0.64286]},{"l":0,"f":2,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.28571,0.71429]}],[{"l":0,"f":4,"t":26.45,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.84211,0.15789]},{"l":1,"p":[0.25,0.75]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":2},{"l":1,"p":[1.0,0.0]},{"l":0,"f":4,"t":19.9,"left":3,"right":4},{"l":1,"p":[0.24,0.76]},{"l":1,"p":[0.05263,0.94737]}],[{"l":0,"f":4,"t":26.45,"left":1,"right":4},{"l":0,"f":4,"t":23.65,"left":2,"right":3},{"l":1,"p":[0.54545,0.45455]},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":42.85,"left":1,"right":4},{"l":0,"f":4,"t":21.55,"left":2,"right":3},{"l":1,"p":[0.47368,0.52632]},{"l":1,"p":[0.70588,0.29412]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.89474,0.10526]},{"l":0,"f":4,"t":22.1,"left":5,"right":6},{"l":1,"p":[0.42857,0.57143]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.5,"left":1,"right":4},{"l":0,"f":4,"t":18.85,"left":2,"right":3},{"l":1,"p":[0.74074,0.25926]},{"l":1,"p":[0.24138,0.75862]},{"l":0,"f":1,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.33333,0.66667]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":23.6,"left":2,"right":3},{"l":1,"p":[0.52381,0.47619]},{"l":1,"p":[0.1,0.9]},{"l":0,"f":4,"t":28.6,"left":5,"right":6},{"l":1,"p":[0.875,0.125]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":3,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":18.85,"left":2,"right":3},{"l":1,"p":[0.76471,0.23529]},{"l":1,"p":[0.37931,0.62069]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":1,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.66667,0.33333]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":1,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.14286,0.85714]},{"l":1,"p":[0.2069,0.7931]}],[{"l":0,"f":1,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":22.1,"left":2,"right":3},{"l":1,"p":[0.875,0.125]},{"l":1,"p":[0.0,1.0]},{"l":0,"f":4,"t":54.5,"left":5,"right":6},{"l":1,"p":[0.57143,0.42857]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":1.5,"left":1,"right":4},{"l":0,"f":3,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.44898,0.55102]},{"l":1,"p":[0.66667,0.33333]},{"l":0,"f":4,"t":14.45,"left":5,"right":6},{"l":1,"p":[1.0,0.0]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":2,"t":0.5,"left":1,"right":4},{"l":0,"f":4,"t":22.7,"left":2,"right":3},{"l":1,"p":[0.72727,0.27273]},{"l":1,"p":[0.13333,0.86667]},{"l":0,"f":0,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.76471,0.23529]},{"l":1,"p":[0.33333,0.66667]}],[{"l":0,"f":4,"t":25.6,"left":1,"right":4},{"l":0,"f":4,"t":15.65,"left":2,"right":3},{"l":1,"p":[0.69565,0.30435]},{"l":1,"p":[0.46429,0.53571]},{"l":0,"f":1,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.0,1.0]},{"l":1,"p":[0.25,0.75]}],[{"l":0,"f":0,"t":0.5,"left":1,"right":4},{"l":0,"f":3,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.75,0.25]},{"l":1,"p":[1.0,0.0]},{"l":0,"f":3,"t":0.5,"left":5,"right":6},{"l":1,"p":[0.41176,0.58824]},{"l":1,"p":[0.0,1.0]}],[{"l":0,"f":4,"t":26.45,"left":1,"right":4},{"l":0,"f":0,"t":0.5,"left":2,"right":3},{"l":1,"p":[0.95652,0.04348]},{"l":1,"p":[0.23333,0.76667]},{"l":1,"p":[0.0,1.0]}]]};</script>
+  <!-- TB_MODEL_INLINE_END -->
+
+  <script>
+    let probAnimFrame = null;
+    const RING_CIRC = 2 * Math.PI * 48;
+
+    function markInputsChanged() {
+      const view = document.getElementById("resultView");
+      const hint = document.getElementById("idleHint");
+      if (!view.classList.contains("hidden")) {
+        view.classList.add("hidden");
+        hint.classList.remove("hidden");
+        document.getElementById("idleText").innerHTML =
+          'Parameter diperbarui &mdash; tekan tombol <strong>ANALISIS RISIKO TB</strong> untuk menampilkan hasil prediksi terbaru.';
+      }
+    }
+
+    function setChoice(inputId, groupId, val, silent) {
+      const v = String(val) === "1" ? "1" : "0";
+      document.getElementById(inputId).value = v;
+      const group = document.getElementById(groupId);
+      group.querySelectorAll(".choice-pill").forEach((btn) => {
+        btn.setAttribute("aria-checked", btn.getAttribute("data-val") === v ? "true" : "false");
+      });
+      if (!silent) markInputsChanged();
+    }
+
+    function setBmiCategory(val, silent) {
+      const v = String(val);
+      document.getElementById("interpretasiBmi").value = v;
+      document.querySelectorAll("#bmiGroup .bmi-card").forEach((card) => {
+        card.setAttribute("aria-checked", card.getAttribute("data-val") === v ? "true" : "false");
+      });
+      if (!silent) markInputsChanged();
+    }
+
+    function toggleBmiCalc() {
+      const box = document.getElementById("bmiCalcBox");
+      const btn = document.getElementById("bmiCalcToggle");
+      const isHidden = box.classList.toggle("hidden");
+      if (btn) btn.setAttribute("aria-expanded", isHidden ? "false" : "true");
+    }
+
+    function autoCalcBmi() {
+      const bb = parseFloat(document.getElementById("bbInput").value);
+      const tbCm = parseFloat(document.getElementById("tbInput").value);
+      const out = document.getElementById("bmiCalcText");
+      if (!bb || !tbCm || tbCm < 80) {
+        out.textContent = "IMT: —";
+        return;
+      }
+      const imt = bb / Math.pow(tbCm / 100, 2);
+      let cat = 1;
+      let label = "Gizi Normal";
+      if (imt < 18.5) {
+        cat = 0;
+        label = "Gizi Kurang";
+      } else if (imt >= 25.0) {
+        cat = 2;
+        label = "Gizi Lebih";
+      }
+      out.textContent = `IMT: ${imt.toFixed(1)} (${label})`;
+      setBmiCategory(cat);
+    }
+
+    function syncTlr2(val, silent) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 19.6;
+      num = Math.min(120, Math.max(1, num));
+      const sliderVal = Math.min(85, Math.max(5, num));
+      const slider = document.getElementById("tlr2Range");
+      const numInput = document.getElementById("tlr2Input");
+      slider.value = sliderVal;
+      numInput.value = num.toFixed(1);
+      const pct = ((sliderVal - 5) / 80) * 100;
+      slider.style.setProperty("--pct", pct.toFixed(1) + "%");
+
+      const pill = document.getElementById("tlr2LevelPill");
+      if (num < 14.3) {
+        pill.textContent = `Ekspresi TLR2 Rendah (${num.toFixed(1)} ng/mL)`;
+        pill.style.background = "#f0fdf4";
+        pill.style.color = "#15803d";
+      } else if (num <= 24.3) {
+        pill.textContent = `Ekspresi TLR2 Normal/Moderat (${num.toFixed(1)} ng/mL)`;
+        pill.style.background = "#f0fdfa";
+        pill.style.color = "#115e59";
+      } else {
+        pill.textContent = `Aktivasi TLR2 Tinggi (${num.toFixed(1)} ng/mL)`;
+        pill.style.background = "#fef2f2";
+        pill.style.color = "#b91c1c";
+      }
+      if (!silent) markInputsChanged();
+    }
+
+    function evalTree(nodes, x) {
+      let idx = 0;
+      while (true) {
+        const node = nodes[idx];
+        if (node.l === 1) return node;
+        idx = x[node.f] <= node.t ? node.left : node.right;
+      }
+    }
+
+    function evalEnsembleProb(trees, x) {
+      let sumP1 = 0;
+      for (let i = 0; i < trees.length; i++) {
+        sumP1 += evalTree(trees[i], x).p[1];
+      }
+      return sumP1 / trees.length;
+    }
+
+    function evalSvmRbf(svm, x) {
+      const xs = [];
+      for (let j = 0; j < x.length; j++) {
+        xs.push((x[j] - svm.mean[j]) / svm.scale[j]);
+      }
+      let dec = svm.intercept;
+      const gamma = svm.gamma;
+      for (let i = 0; i < svm.support_vectors.length; i++) {
+        const sv = svm.support_vectors[i];
+        let sq = 0;
+        for (let j = 0; j < xs.length; j++) {
+          const d = sv[j] - xs[j];
+          sq += d * d;
+        }
+        dec += svm.dual_coef[i] * Math.exp(-gamma * sq);
+      }
+      const z = svm.platt_slope * dec + svm.platt_intercept;
+      const p1 = 1.0 / (1.0 + Math.exp(-z));
+      return { dec, p1 };
+    }
+
+    function animateProbScore(targetPct) {
+      const outEl = document.getElementById("probOutput");
+      if (probAnimFrame) cancelAnimationFrame(probAnimFrame);
+      const duration = 380;
+      const start = performance.now();
+      function step(now) {
+        const t = Math.max(0, Math.min(1, (now - start) / duration));
+        const eased = 1 - Math.pow(1 - t, 3);
+        outEl.textContent = `${(targetPct * eased).toFixed(1).replace(".", ",")}%`;
+        if (t < 1) {
+          probAnimFrame = requestAnimationFrame(step);
+        } else {
+          outEl.textContent = `${targetPct.toFixed(1).replace(".", ",")}%`;
+        }
+      }
+      probAnimFrame = requestAnimationFrame(step);
+    }
+
+    function resetTbForm() {
+      setChoice("riwayatKontak", "kontakGroup", 0, true);
+      setChoice("jenisKelamin", "jkGroup", 0, true);
+      setChoice("antiHiv", "hivGroup", 0, true);
+      setBmiCategory(1, true);
+      syncTlr2(19.6, true);
+      document.getElementById("bbInput").value = "";
+      document.getElementById("tbInput").value = "";
+      document.getElementById("bmiCalcText").textContent = "IMT: —";
+      document.getElementById("resultView").classList.add("hidden");
+      document.getElementById("idleHint").classList.remove("hidden");
+      document.getElementById("idleText").innerHTML =
+        'Masukkan profil klinis dan kadar biomarker pasien, lalu tekan tombol <strong>ANALISIS RISIKO TB</strong> untuk menampilkan hasil prediksi.';
+    }
+
+    function calculateTbPrediction() {
+      const model = window.TB_MODEL;
+      if (!model || !model.svm_rbf) return;
+
+      const kontak = parseFloat(document.getElementById("riwayatKontak").value);
+      const jk = parseFloat(document.getElementById("jenisKelamin").value);
+      const bmi = parseFloat(document.getElementById("interpretasiBmi").value);
+      const hiv = parseFloat(document.getElementById("antiHiv").value);
+      const tlr2 = parseFloat(document.getElementById("tlr2Input").value) || 19.6;
+
+      // Urutan fitur: ["Riwayat_Kontak", "Jenis_Kelamin", "Interpretasi_BMI", "Anti_HIV", "TLR2"]
+      const x = [kontak, jk, bmi, hiv, tlr2];
+
+      const svmRes = evalSvmRbf(model.svm_rbf, x);
+      const pSvm = svmRes.p1 * 100;
+      const pEt = evalEnsembleProb(model.et_trees, x) * 100;
+      const pRf = evalEnsembleProb(model.rf_trees, x) * 100;
+
+      const hint = document.getElementById("idleHint");
+      const view = document.getElementById("resultView");
+      const hero = document.getElementById("heroMetric");
+      const badge = document.getElementById("catBadge");
+      const rec = document.getElementById("clinicalRec");
+
+      let catClass = "low";
+      let catText = "RISIKO RENDAH (NON-TB)";
+      if (pSvm >= 60.0 || svmRes.dec >= 0.0) {
+        catClass = "high";
+        catText = "INDIKASI KUAT TB POSITIF";
+        rec.innerHTML = "<strong>Rekomendasi Klinis:</strong> Pasien memiliki profil risiko tinggi Tuberkulosis aktif. Segera lakukan pemeriksaan konfirmasi bakteriologis (<strong>TCM GeneXpert MTB/RIF</strong> atau BTA sputum) dan foto toraks.";
+      } else if (pSvm >= 35.0) {
+        catClass = "moderate";
+        catText = "RISIKO SEDANG (OBSERVASI)";
+        rec.innerHTML = "<strong>Rekomendasi Klinis:</strong> Profil biomarker/klinis berada di zona transisi. Lakukan evaluasi gejala klinis respiratorik (batuk &ge; 2 minggu, keringat malam) dan pertimbangkan skrining dahak/foto toraks.";
+      } else {
+        catClass = "low";
+        catText = "RISIKO RENDAH (NON-TB)";
+        rec.innerHTML = "<strong>Rekomendasi Klinis:</strong> Probabilitas Tuberkulosis aktif rendah berdasarkan profil paparan dan biomarker TLR2 saat ini. Tetap lakukan edukasi pencegahan dan pemantauan berkala bila muncul gejala.";
+      }
+
+      hint.classList.add("hidden");
+      view.className = "result-view";
+      void view.offsetWidth;
+      view.classList.add("animate-in");
+      hero.className = "hero-metric " + catClass;
+
+      badge.textContent = catText;
+      animateProbScore(pSvm);
+
+      const offset = RING_CIRC * (1 - Math.min(1, Math.max(0, pSvm / 100)));
+      document.getElementById("ringFg").style.strokeDashoffset = offset.toFixed(2);
+
+      document.getElementById("barSvm").style.width = `${pSvm.toFixed(1)}%`;
+      document.getElementById("pctSvm").textContent = `${Math.round(pSvm)}%`;
+      document.getElementById("barEt").style.width = `${pEt.toFixed(1)}%`;
+      document.getElementById("pctEt").textContent = `${Math.round(pEt)}%`;
+      document.getElementById("barRf").style.width = `${pRf.toFixed(1)}%`;
+      document.getElementById("pctRf").textContent = `${Math.round(pRf)}%`;
+
+      const posVotes = (pSvm >= 50 ? 1 : 0) + (pEt >= 50 ? 1 : 0) + (pRf >= 50 ? 1 : 0);
+      document.getElementById("consensusSummary").textContent =
+        posVotes === 3 ? "Konsensus 3/3 metode: TB Positif" :
+        posVotes === 0 ? "Konsensus 3/3 metode: Non-TB" :
+        `Konsensus ${posVotes}/3 metode: TB Positif`;
+
+      const factors = [];
+      if (kontak === 1) {
+        factors.push({ cls: "up", text: "\u2191 Kontak Erat TB (+)" });
+      } else {
+        factors.push({ cls: "down", text: "\u2193 Tanpa Riwayat Kontak" });
+      }
+
+      if (tlr2 > 24.3) {
+        factors.push({ cls: "up", text: `\u2191 Aktivasi Biomarker TLR2 Tinggi (${tlr2.toFixed(1)} ng/mL)` });
+      } else if (tlr2 < 14.3) {
+        factors.push({ cls: "down", text: `\u2193 Kadar TLR2 Rendah (${tlr2.toFixed(1)} ng/mL)` });
+      } else {
+        factors.push({ cls: "neutral", text: `\u2022 Kadar TLR2 Moderat (${tlr2.toFixed(1)} ng/mL)` });
+      }
+
+      if (hiv === 1) {
+        factors.push({ cls: "up", text: "\u2191 Status Anti-HIV Reaktif (+)" });
+      } else {
+        factors.push({ cls: "down", text: "\u2193 Anti-HIV Non-Reaktif" });
+      }
+
+      const bmiText = bmi === 0 ? "Status Gizi Kurang (Kurus)" : (bmi === 1 ? "Status Gizi Normal" : "Status Gizi Lebih");
+      factors.push({ cls: bmi === 0 ? "up" : "neutral", text: (bmi === 0 ? "\u2191 " : "\u2022 ") + bmiText });
+
+      const jkText = jk === 1 ? "Jenis Kelamin: Laki-laki" : "Jenis Kelamin: Perempuan";
+      factors.push({ cls: "neutral", text: "\u2022 " + jkText });
+
+      document.getElementById("factorList").innerHTML = factors
+        .map((f) => `<span class="factor-tag ${f.cls}">${f.text}</span>`)
+        .join("");
+
+      if (window.innerWidth < 880) {
+        view.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      syncTlr2(19.6, true);
+    });
+  </script>
+</body>
+</html>
